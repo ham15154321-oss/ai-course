@@ -726,6 +726,7 @@ var Q=[['job','你現在做哪一行、主要負責什麼？','text','例：室�
  ['work','這堂課結束時，你最想帶走哪一種作品？','one',['一頁網頁','一份簡報','一張圖或流程圖','一份資料分析圖表','一個自己的知識庫','還不確定']],
  ['use','這件作品要用在哪裡？','text','例：給客戶看的提案、每週要交的報表'],
  ['pain','你工作上每週都在重複做、最想交給 AI 的一件事？','text',''],
+ ['skill','你有沒有把每天重複做的工作，寫成一份固定的指令（Skill，技能），讓 AI 每次照著做，並且越用越改越好？','one',['還沒聽過','聽過，還沒寫過','寫過一兩個，但很少回頭改','有在寫，而且會一直修改、越改越好用']],
  ['hope','你對這堂課最期待的是什麼？','text',''],
  ['help','你最需要老師協助的地方？（可複選，也可以直接打字）','many',['不知道從哪裡開始','指令不會下','工具不會操作','不知道能用在工作的哪裡'],'用你自己的話告訴老師：你想解決什麼、卡在哪裡、希望老師怎麼幫你'],
  ['dev','上課會帶什麼設備？','one',['筆電','平板','只有手機']]];
@@ -827,7 +828,7 @@ function svBar(t,rows){var h='<div class="svb"><b>'+t+'</b>';rows.forEach(functi
 function svLink(){var u=location.href.split('#')[0].split('?')[0]+'?survey';return '<div class="svlink"><span>給業務的問卷連結（學生點開直接填問卷）</span><code>'+esc(u)+'</code><button class="chip" data-copy-link="'+esc(u)+'">複製連結</button></div>';}
 function svSum(){var n=AD.surveys.length,lap=AD.surveys.filter(function(x){return String((x.answers||{}).dev||'').indexOf('筆電')>=0;}).length,notes=[];
  AD.surveys.forEach(function(x){var m=String((x.answers||{}).help||'').split('補充：')[1];if(m)notes.push([x.name,m]);});
- var h='<div class="svsum"><div class="svk"><div><b>'+n+'</b><span>人填了問卷</span></div><div><b>'+lap+'</b><span>人會帶筆電</span></div><div><b>'+(n-lap)+'</b><span>人沒帶筆電，上課要多照顧</span></div></div><div class="svg">'+svBar('最需要老師協助',svCount('help'))+svBar('最想帶走的作品',svCount('work'))+svBar('用 AI 的頻率',svCount('freq'))+svBar('用過的 AI',svCount('tools'))+'</div>';
+ var h='<div class="svsum"><div class="svk"><div><b>'+n+'</b><span>人填了問卷</span></div><div><b>'+lap+'</b><span>人會帶筆電</span></div><div><b>'+(n-lap)+'</b><span>人沒帶筆電，上課要多照顧</span></div></div><div class="svg">'+svBar('最需要老師協助',svCount('help'))+svBar('最想帶走的作品',svCount('work'))+svBar('有沒有寫 Skill 的習慣',svCount('skill'))+svBar('用 AI 的頻率',svCount('freq'))+svBar('用過的 AI',svCount('tools'))+'</div>';
  if(notes.length){h+='<div class="svb"><b>學生自己打的協助需求</b>';notes.forEach(function(q){h+='<p class="svn"><b>'+esc(q[0])+'</b>'+esc(q[1])+'</p>';});h+='</div>';}
  return h+svLink()+'</div>';}
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-copy-link]');if(!b)return;var u=b.getAttribute('data-copy-link');(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){C.toast('已複製問卷連結');},function(){C.toast('請手動複製：'+u);});});
@@ -1553,6 +1554,7 @@ body.in-station canvas#gl{opacity:1;filter:none}
 .orb.p5{--pg:#b98cff;--pb:linear-gradient(166deg,#d9c2ff 0 14%,#9b6cf0 14% 30%,#c8a8ff 30% 44%,#7a48d8 44% 62%,#b792ff 62% 80%,#5b2fb0 80%)}.orb.p5:after{border-color:rgba(200,170,255,.55);border-top-color:rgba(200,170,255,.14);transform:rotate(22deg)}
 .orb.p6{--pg:#c9d0e6;--pb:radial-gradient(circle at 36% 58%,rgba(60,66,90,.6) 0 10%,transparent 11%),radial-gradient(circle at 64% 34%,rgba(60,66,90,.5) 0 7%,transparent 8%),radial-gradient(circle at 58% 72%,rgba(60,66,90,.5) 0 6%,transparent 7%),radial-gradient(circle at 26% 30%,rgba(60,66,90,.45) 0 5%,transparent 6%),linear-gradient(150deg,#e8ebf5,#9aa3bd 60%,#565e7c)}
 .orb.p7{--pg:#12d8a0;--pb:radial-gradient(ellipse at 40% 60%,rgba(255,255,255,.45) 0 8%,transparent 16%),linear-gradient(170deg,#9cf5d6 0 20%,#12d8a0 20% 42%,#7eeccb 42% 58%,#0c9c78 58% 80%,#0a6a5a 80%)}
+.modal{grid-template-columns:minmax(0,1fr)}.mbox{min-width:0}.mbox .tw{max-width:100%;overflow-x:auto}
 /* 後台問卷彙整 */
 .svsum{display:grid;gap:.9rem;margin-bottom:1.1rem}
 .svk{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}.svk>div{border:1px solid var(--line);border-radius:1rem;padding:.7rem .9rem;background:rgba(255,255,255,.04)}.svk b{display:block;font-size:1.7rem;font-weight:900;line-height:1.1}.svk span{font-size:.76rem;color:var(--mut)}
