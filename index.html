@@ -758,12 +758,13 @@ function localNames(D){var m={};D.works.forEach(function(w){m[w.name]=1;});D.sur
 function localApi(a,d,cb){var D=db(),r;
  function isT(){return String(d.tcode||'')==='0015';}
  if(a==='login'){r=d.tcode&&!isT()?{ok:false,msg:'登入失敗'}:{ok:true,teacher:isT()};}
- else if(a==='state'){r={ok:true,mine:D.works.filter(function(w){return w.name===d.name;}),wall:D.works.filter(function(w){return w.status==='public';}),surveyDone:D.surveys.some(function(x){return x.name===d.name;}),line:D.line||'',cohort:'',stuck:(D.stuck||[]).filter(function(x){return x.name===d.name&&x.status==='open';})};}
+ else if(a==='state'){r={ok:true,mine:D.works.filter(function(w){return w.name===d.name;}),wall:D.works.filter(function(w){return w.status==='public';}),surveyDone:D.surveys.some(function(x){return x.name===d.name;}),line:D.line||'',mats:D.mats||[],cohort:'',stuck:(D.stuck||[]).filter(function(x){return x.name===d.name&&x.status==='open';})};}
  else if(a==='survey'){D.surveys=D.surveys.filter(function(x){return x.name!==d.name;});D.surveys.push({name:d.name,ts:Date.now(),answers:d.answers});ls('aifleet_db',D);r={ok:true};}
  else if(a==='submit'){var prev=D.works.filter(function(w){return w.name===d.name&&w.station===d.station;});var w={id:'w'+Date.now()+Math.floor(Math.random()*1e4),name:d.name,station:d.station,title:d.title,link:d.link,note:d.note,file:d.fileName||'',fileUrl:'',status:'pending',star:false,mended:prev.some(function(p){return p.status==='returned'||p.feedback;}),feedback:'',consent:!!d.consent,ts:Date.now()};D.works.push(w);ls('aifleet_db',D);r={ok:true,work:w};}
- else if(a==='admin_list'){r=isT()?{ok:true,works:D.works,surveys:D.surveys,roster:[],checkins:[],cohorts:[],cohort:'',current:'',line:D.line||'',stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})}:{ok:false,msg:'沒有權限'};}
+ else if(a==='admin_list'){r=isT()?{ok:true,works:D.works,surveys:D.surveys,roster:[],checkins:[],cohorts:[],cohort:'',current:'',line:D.line||'',mats:D.mats||[],stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})}:{ok:false,msg:'沒有權限'};}
  else if(a==='stuck'){D.stuck=(D.stuck||[]).filter(function(x){return !(x.name===d.name&&x.status==='open');});D.stuck.push({id:'s'+Date.now(),ts:Date.now(),name:d.name,station:d.station,note:String(d.note||'').slice(0,100),status:'open'});ls('aifleet_db',D);r={ok:true};}
  else if(a==='stuck_done'){(D.stuck||[]).forEach(function(x){if(x.status==='open'&&(isT()?x.id===d.id:x.name===d.name))x.status='done';});ls('aifleet_db',D);r={ok:true};}
+ else if(/^mat_(add|del|check)$/.test(a)){if(!isT())r={ok:false,msg:'沒有權限'};else{D.mats=D.mats||[];if(a==='mat_add'){if(!String(d.title||'').trim()||!/^https:\/\//.test(String(d.url||'')))r={ok:false,msg:'請填名稱，連結要 https:// 開頭'};else{var fm=/drive\.google\.com\/file\/d\/([\w-]+)/.exec(d.url);D.mats.push({id:'m'+Date.now(),title:String(d.title).slice(0,40),url:fm?'https://drive.google.com/uc?export=download&id='+fm[1]:d.url,station:d.station>=0&&d.station<=4?+d.station:-1,chk:''});}}else if(a==='mat_del')D.mats=D.mats.filter(function(m){return m.id!==d.id;});if(!r){ls('aifleet_db',D);r={ok:true,warn:'',mats:D.mats};}}}
  else if(a==='line_set'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.line=String(d.value||'');ls('aifleet_db',D);r={ok:true};}}
  else if(/^(roster_add|roster_del|cohort_set)$/.test(a))r={ok:false,msg:'示範模式沒有名單功能，接上雲端才有'};
  else if(a==='admin_review'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.works.forEach(function(w){if(w.id===d.id){if(d.status)w.status=d.status;if(d.star!==undefined)w.star=d.star;if(d.feedback!==undefined)w.feedback=d.feedback;}});ls('aifleet_db',D);r={ok:true};}}
@@ -796,7 +797,7 @@ $('#lgo').onclick=doLogin;['lname'].forEach(function(id){$('#'+id).addEventListe
 var outT;$('#who').onclick=function(){var b=this;if(!S.name){showLogin();return;}if(b.dataset.arm){ls('aifleet_me',null);S={};ME={mine:[],wall:[],surveyDone:false,teacher:false};delete b.dataset.arm;C.leave();paint();showLogin();return;}b.dataset.arm=1;b.textContent='再按一次登出';clearTimeout(outT);outT=setTimeout(function(){delete b.dataset.arm;paint();},2600);};
 var WANT_SV=/[?&]survey\b/.test(location.search);
 function afterLogin(){refresh(function(){if(!ME.teacher&&(WANT_SV||(!ME.surveyDone&&!ls('aifleet_skip_'+S.name))))showSurvey();WANT_SV=false;});}
-function refresh(cb){if(!S.name){paint();cb&&cb();return;}api('state',{},function(r){if(r&&r.ok){ME.mine=r.mine||[];ME.wall=r.wall||[];ME.surveyDone=!!r.surveyDone;ME.line=r.line||'';ME.stuck=r.stuck||[];ME.cohort=r.cohort||'';}paint();if(window.CLASSX)window.CLASSX.sync();cb&&cb();});}
+function refresh(cb){if(!S.name){paint();cb&&cb();return;}api('state',{},function(r){if(r&&r.ok){ME.mine=r.mine||[];ME.wall=r.wall||[];ME.surveyDone=!!r.surveyDone;ME.line=r.line||'';ME.mats=r.mats||[];ME.stuck=r.stuck||[];ME.cohort=r.cohort||'';}paint();if(window.CLASSX)window.CLASSX.sync();cb&&cb();});}
 
 /* ================= 首頁狀態 ================= */
 function latest(i){var a=ME.mine.filter(function(w){return w.station===i;});return a.length?a[a.length-1]:null;}
@@ -4654,7 +4655,7 @@ window.ARENA={reset:function(){B=null;},qr:qrSvg,load:load,isOpen:function(){ret
 
 </script>
 <script>
-/* ===== 班級管理：名單和出席、我卡住了、LINE 群組、梯次切換（v1.6） ===== */
+/* ===== 班級管理：名單和出席、我卡住了、LINE 群組、梯次切換（v1.6）、教材下載（v2.0） ===== */
 (function(){
 'use strict';
 var C=window.CORE,A=window.APP,$=C.$,esc=A.esc,api=A.api,ST=A.ST,NUM=A.NUM;
@@ -4668,6 +4669,8 @@ var css=el('style');css.textContent=
 '.stuckbox{border-color:rgba(255,212,0,.35)}.stuckbox[hidden],.stuckbox [hidden]{display:none!important}.stk0{display:flex;flex-wrap:wrap;gap:.5rem .9rem;align-items:center}.stk0 span{color:var(--mut);font-size:.86rem;flex:1;min-width:11rem}.stk1 .row{margin-top:.6rem}.stk1 .fld{margin-top:0}'+
 '.stk2{display:flex;flex-wrap:wrap;gap:.7rem;align-items:center}.stk2 i{width:.6rem;height:.6rem;border-radius:50%;background:#ffd400;box-shadow:0 0 12px #ffd400;animation:vpb 1.4s ease-in-out infinite}.stk2 b{flex:1;min-width:11rem}'+
 '#linepill{position:fixed;left:1rem;bottom:1.1rem;z-index:45;display:none;align-items:center;gap:.5rem;padding:.55rem .95rem;border-radius:99px;border:1px solid rgba(6,199,85,.6);background:rgba(4,22,12,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#fff;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;transition:transform .12s ease-out}#linepill.on{display:flex}#linepill:active{transform:scale(.96)}#linepill i{width:.55rem;height:.55rem;border-radius:50%;background:#06c755}body.in-station #linepill,body[data-modal] #linepill{display:none}'+
+'#matpill{position:fixed;left:1rem;bottom:1.1rem;z-index:45;display:none;align-items:center;gap:.5rem;min-height:2.56rem;padding:.55rem .95rem;border-radius:99px;border:1px solid rgba(120,150,255,.65);background:rgba(8,12,34,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#fff;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;transition:transform .12s ease-out}#matpill.on{display:flex}#matpill:active{transform:scale(.96)}#matpill svg{width:1rem;height:1rem;flex:none}#linepill.on~#matpill{left:11.2rem}body.in-station #linepill.on~#matpill{left:1rem}body.in-station #matpill{z-index:55}body[data-modal] #matpill{display:none}'+
+'.matl{margin:1rem 0 .4rem;display:flex;flex-direction:column;gap:.55rem;max-height:56vh;overflow:auto;-webkit-overflow-scrolling:touch}.matr{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);border-radius:1rem;padding:.7rem .8rem;background:rgba(255,255,255,.04);text-align:left}.matr.now{border-color:var(--c)}.matr div{flex:1;min-width:0}.matr b{display:block;font-size:.98rem;line-height:1.35;overflow-wrap:anywhere}.matr small{color:var(--mut);font-size:.76rem}.matr.now small{color:#fff}.matr .btn{flex:none;text-decoration:none;padding:.7rem 1.1rem;font-size:.9rem}.matr .btn:active{transform:scale(.97)}.cx a.chip,.cx a.chip:visited{color:#fff!important;display:inline-block}.cx .mtag{display:inline-block;border-radius:99px;padding:.1rem .55rem;font-size:.72rem;font-weight:800;margin-left:.4rem}.cx .mtag.no{background:#ffd400;color:#1a1400}.cx .mtag.ok{border:1px solid rgba(125,255,176,.5);color:#7dffb0}.cx .mtag.un{border:1px solid var(--line);color:var(--mut)}'+
 '.lineqr{width:min(15rem,70vw);margin:1rem auto;background:#fff;border-radius:1rem;padding:.6rem}.lineqr svg{display:block;width:100%;height:auto}'+
 '.cx .card2{border:1px solid var(--line);border-radius:1.1rem;padding:.9rem 1rem;background:rgba(255,255,255,.03);margin-bottom:.9rem}.cx h4{margin:0 0 .5rem;font-size:1rem}.cx .sum{display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:.2rem 0 .7rem}.cx .sum span{border:1px solid var(--line);border-radius:99px;padding:.2rem .7rem;font-size:.8rem}.cx .sum b{color:#ffd400}'+
 '.cx .gst{display:inline-block;background:#ffd400;color:#1a1400;font-weight:800;font-size:.76rem;border-radius:99px;padding:.15rem .6rem;margin-right:.4rem}.cx td .chip{padding:.2rem .55rem;font-size:.72rem;margin:.1rem .2rem .1rem 0}.cx .gnote{background:rgba(255,212,0,.1);border:1px solid rgba(255,212,0,.4);border-radius:.8rem;padding:.6rem .8rem;font-size:.86rem;line-height:1.6;margin:0 0 .7rem}.cx .gnote b{color:#ffd400}.cx td.y{color:#7dffb0;font-weight:800}.cx td.n{color:var(--mut)}.cx tr.xout td:first-child{color:var(--mut)}.cx .chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}.cx textarea.fld,.cx input.fld{margin-top:.4rem}.cx .two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}@media (max-width:560px){.cx .two{grid-template-columns:1fr}}'+
@@ -4695,7 +4698,24 @@ lm.id='linem';lm.hidden=true;document.body.appendChild(lm);
 function lineUrl(){var u=String((A.who()||{}).line||'');return /^https:\/\/(line\.me|lin\.ee|liff\.line\.me)\//i.test(u)?u:'';}
 lp.onclick=function(){var u=lineUrl();if(!u)return;$('#lineqr').innerHTML=window.ARENA?window.ARENA.qr(u):'';$('#linego').href=u;A.modal('linem',true);};
 $('#linex').onclick=function(){A.modal('linem',false);};
-function sync(){lp.classList.toggle('on',!!(me().name&&!isT()&&lineUrl()));syncStuck();}
+
+/* ---------- 學生：教材下載（v2.0） ---------- */
+var DLI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
+var mp=el('button','',DLI+'<span>教材下載</span>');mp.id='matpill';mp.type='button';document.body.appendChild(mp);
+var mm=el('div','modal','<div class="mbox"><div class="kick">老師給的檔案</div><h2>教材下載</h2><p class="cap" id="matcap"></p><div class="matl" id="matl"></div><div class="row" style="justify-content:center"><button class="chip" id="matx" type="button">關閉</button></div></div>');
+mm.id='matm';mm.hidden=true;document.body.appendChild(mm);
+function matOk(u){return /^https:\/\/[^\s"'<>]+$/.test(String(u||''));}
+function mats(){return ((A.who()||{}).mats||[]).filter(function(m){return m&&m.title&&matOk(m.url);});}
+function matTag(s){return s>=0&&s<=4?stName(s):'整堂課都會用到';}
+function matSort(L){var inS=document.body.classList.contains('in-station'),cs=inS?curStation():-9;
+ function rk(m){return m.station===cs?-2:(m.station<0?-1:m.station);}
+ return L.map(function(m,i){return {m:m,i:i};}).sort(function(a,b){return rk(a.m)-rk(b.m)||a.i-b.i;}).map(function(x){return {m:x.m,now:x.m.station===cs};});}
+mp.onclick=function(){var L=matSort(mats());if(!L.length)return;
+ $('#matcap').textContent='按「下載」會打開 Google 雲端硬碟。檔案比較大的時候，Google 會多問一次，再按一次「仍要下載」就可以。';
+ $('#matl').innerHTML=L.map(function(x){var m=x.m,dl=/export=download/.test(m.url);return '<div class="matr'+(x.now?' now':'')+'"><div><b>'+esc(m.title)+'</b><small>'+(x.now?'這一站要用':esc(matTag(m.station)))+'</small></div><a class="btn" href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">'+(dl?'下載':'打開')+'</a></div>';}).join('');
+ A.modal('matm',true);};
+$('#matx').onclick=function(){A.modal('matm',false);};
+function sync(){lp.classList.toggle('on',!!(me().name&&!isT()&&lineUrl()));mp.classList.toggle('on',!!(me().name&&!isT()&&mats().length));syncStuck();}
 
 /* ---------- 老師：後台「名單和出席」 ---------- */
 var AD=null,day=today(),SL={pending:'待審',public:'公開',returned:'退回'};
@@ -4732,6 +4752,12 @@ function adminHtml(){if(!AD)return '<p class="cap">讀取中…</p>';var R=AD.ro
  h+='</div>';
  /* LINE */
  h+='<div class="card2"><h4>課後 LINE 群組</h4><p class="cap" style="margin:0">貼上群組的邀請連結，學生首頁左下角就會出現「加入課後 LINE 群」，點開是 QR code。清空再儲存就會收起來。</p><input class="fld" id="cxLine" inputmode="url" placeholder="https://line.me/…" value="'+esc(AD.line||'')+'"><div class="row"><button class="btn" data-cx="line">儲存連結</button></div></div>';
+ /* 教材 */
+ var ML=AD.mats||[],CK={ok:['ok','共用已開'],no:['no','還沒開共用'],'':['un','沒辦法自動確認']};
+ h+='<div class="card2"><h4>教材下載'+(ML.length?'（'+ML.length+'）':'')+'</h4><p class="cap" style="margin:0">貼上 Google 雲端硬碟的連結，學生首頁左下角就會出現「教材下載」。檔案要先在 Google 那邊把共用開成「知道連結的任何使用者」。</p>';
+ if(ML.some(function(m){return m.chk==='no';}))h+='<p class="gnote" style="margin:.7rem 0 0"><b>有檔案還沒開共用</b>，學生按了會下載不了。到 Google 雲端硬碟對檔案按右鍵 →「共用」→ 一般存取權改成「知道連結的任何使用者」，改好再按下面的「重新檢查」。</p>';
+ h+=ML.map(function(m){var k=CK[m.chk]||CK[''];return '<div class="adlog"><span><b>'+esc(m.title)+'</b>　<span style="color:var(--mut)">'+esc(matTag(m.station))+'</span><span class="mtag '+k[0]+'">'+k[1]+'</span></span><span><a class="chip" href="'+esc(matOk(m.url)?m.url:'#')+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none">試按</a> <button class="chip" data-cx="md" data-id="'+esc(m.id)+'">拿掉</button></span></div>';}).join('');
+ h+='<input class="fld" id="cxMt" maxlength="40" placeholder="教材名稱，例：第三站 練習資料"><input class="fld" id="cxMu" inputmode="url" placeholder="https://drive.google.com/…"><div class="row" style="margin:.6rem 0 0;flex-wrap:wrap" id="cxMs"><span class="cap" style="margin:0">哪一站用：</span><button class="chip" data-cx="ms" data-v="-1" aria-pressed="true">整堂課</button>'+ST.map(function(s,i){return '<button class="chip" data-cx="ms" data-v="'+i+'" aria-pressed="false">'+stName(i)+'</button>';}).join('')+'</div><div class="row"><button class="btn" data-cx="ma">上架</button>'+(ML.length?'<button class="chip" data-cx="mc">重新檢查共用</button>':'')+'</div></div>';
  return h+'</div>';}
 function act(a,d,msg,after){api(a,d,function(r){if(!r||!r.ok){C.toast((r&&r.msg)||'沒有成功，請再試一次');return;}if(msg)C.toast(typeof msg==='function'?msg(r):msg);(after||adminLoad)();});}
 $('#abody').addEventListener('click',function(e){var b=e.target.closest('[data-cx]');if(!b)return;var k=b.dataset.cx;
@@ -4744,6 +4770,10 @@ $('#abody').addEventListener('click',function(e){var b=e.target.closest('[data-c
   b.disabled=true;A.setCohort(co);act('roster_add',{names:ns,cohort:co,role:$('#cxRole').value.trim()},function(r){return '加了 '+r.n+' 人'+(r.n<ns.length?'，'+(ns.length-r.n)+' 個已經在名單裡':'');});}
  else if(k==='del'){if(b.dataset.arm)act('roster_del',{who:b.dataset.n,cohort:b.dataset.v},'已從名單拿掉 '+b.dataset.n);else{b.dataset.arm=1;b.textContent='再按一次確定';setTimeout(function(){delete b.dataset.arm;b.textContent='拿掉';},2600);}}
  else if(k==='role')act('roster_role',{who:b.dataset.n,cohort:((AD.roster.filter(function(x){return x.name===b.dataset.n;})[0]||{}).cohort||AD.cohort),role:b.dataset.v},b.dataset.n+' 改成'+b.dataset.v);
+ else if(k==='ms'){[].forEach.call(document.querySelectorAll('#cxMs [data-cx=ms]'),function(x){x.setAttribute('aria-pressed',String(x===b));});}
+ else if(k==='ma'){var mt=$('#cxMt').value.trim(),mu=$('#cxMu').value.trim(),ms=document.querySelector('#cxMs [aria-pressed=true]');if(!mt){C.toast('先填教材名稱');$('#cxMt').focus();return;}if(!/^https:\/\//.test(mu)){C.toast('請貼 https:// 開頭的連結');$('#cxMu').focus();return;}b.disabled=true;setTimeout(function(){b.disabled=false;},5000);act('mat_add',{title:mt,url:mu,station:ms?+ms.dataset.v:-1},function(r){return r.warn||'已上架，學生重新整理就看得到';});}
+ else if(k==='md'){if(b.dataset.arm)act('mat_del',{id:b.dataset.id},'已拿掉');else{b.dataset.arm=1;b.textContent='再按一次確定';setTimeout(function(){delete b.dataset.arm;b.textContent='拿掉';},2600);}}
+ else if(k==='mc'){b.disabled=true;b.textContent='檢查中…';act('mat_check',{},function(r){var n=(r.mats||[]).filter(function(m){return m.chk==='no';}).length;return n?'還有 '+n+' 份沒開共用':'檢查完了';});}
  else if(k==='line')act('line_set',{value:$('#cxLine').value.trim()},'LINE 連結已儲存');});
 
 /* ---------- 老師：投影畫面上的「卡住的人」 ---------- */
