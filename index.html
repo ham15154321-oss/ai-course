@@ -766,10 +766,11 @@ function localApi(a,d,cb){var D=db(),r;
  else if(a==='state'){r={ok:true,mine:D.works.filter(function(w){return w.name===d.name;}),wall:D.works.filter(function(w){return w.status==='public';}),surveyDone:D.surveys.some(function(x){return x.name===d.name;}),line:D.line||'',mats:D.mats||[],cohort:'',stuck:(D.stuck||[]).filter(function(x){return x.name===d.name&&x.status==='open';})};}
  else if(a==='survey'){D.surveys=D.surveys.filter(function(x){return x.name!==d.name;});D.surveys.push({name:d.name,ts:Date.now(),answers:d.answers});ls('aifleet_db',D);r={ok:true};}
  else if(a==='submit'){var prev=D.works.filter(function(w){return w.name===d.name&&w.station===d.station;});var w={id:'w'+Date.now()+Math.floor(Math.random()*1e4),name:d.name,station:d.station,title:d.title,link:d.link,note:d.note,file:d.fileName||'',fileUrl:'',status:'pending',star:false,mended:prev.some(function(p){return p.status==='returned'||p.feedback;}),feedback:'',consent:!!d.consent,ts:Date.now()};D.works.push(w);ls('aifleet_db',D);r={ok:true,work:w};}
- else if(a==='admin_list'){r=isT()?{ok:true,works:D.works,surveys:D.surveys,roster:[],checkins:[],cohorts:[],cohort:'',current:'',line:D.line||'',mats:D.mats||[],stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})}:{ok:false,msg:'沒有權限'};}
+ else if(a==='admin_list'){r=isT()?{ok:true,works:D.works,surveys:D.surveys,roster:[],checkins:[],cohorts:[],cohort:'',current:'',line:D.line||'',mats:D.mats||[],svmap:D.svmap||{},svself:[],stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})}:{ok:false,msg:'沒有權限'};}
  else if(a==='stuck'){D.stuck=(D.stuck||[]).filter(function(x){return !(x.name===d.name&&x.status==='open');});D.stuck.push({id:'s'+Date.now(),ts:Date.now(),name:d.name,station:d.station,note:String(d.note||'').slice(0,100),status:'open'});ls('aifleet_db',D);r={ok:true};}
  else if(a==='stuck_done'){(D.stuck||[]).forEach(function(x){if(x.status==='open'&&(isT()?x.id===d.id:x.name===d.name))x.status='done';});ls('aifleet_db',D);r={ok:true};}
  else if(/^mat_(add|del|check)$/.test(a)){if(!isT())r={ok:false,msg:'沒有權限'};else{D.mats=D.mats||[];if(a==='mat_add'){if(!String(d.title||'').trim()||!/^https:\/\//.test(String(d.url||'')))r={ok:false,msg:'請填名稱，連結要 https:// 開頭'};else{var fm=/drive\.google\.com\/file\/d\/([\w-]+)/.exec(d.url);D.mats.push({id:'m'+Date.now(),title:String(d.title).slice(0,40),url:fm?'https://drive.google.com/uc?export=download&id='+fm[1]:d.url,station:d.station>=0&&d.station<=4?+d.station:-1,chk:''});}}else if(a==='mat_del')D.mats=D.mats.filter(function(m){return m.id!==d.id;});if(!r){ls('aifleet_db',D);r={ok:true,warn:'',mats:D.mats};}}}
+ else if(a==='survey_map'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.svmap=D.svmap||{};if(d.clear)delete D.svmap[d.from];else D.svmap[d.from]=d.skip?'-':d.to;ls('aifleet_db',D);r={ok:true,svmap:D.svmap};}}
  else if(a==='line_set'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.line=String(d.value||'');ls('aifleet_db',D);r={ok:true};}}
  else if(/^(roster_add|roster_del|cohort_set)$/.test(a))r={ok:false,msg:'示範模式沒有名單功能，接上雲端才有'};
  else if(a==='admin_review'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.works.forEach(function(w){if(w.id===d.id){if(d.status)w.status=d.status;if(d.star!==undefined)w.star=d.star;if(d.feedback!==undefined)w.feedback=d.feedback;}});ls('aifleet_db',D);r={ok:true};}}
@@ -946,7 +947,7 @@ function adminPaint(){var pend=AD.works.filter(function(w){return w.status==='pe
  else if(tab===2){var names={};AD.works.forEach(function(w){names[w.name]=1;});AD.surveys.forEach(function(x){names[x.name]=1;});var ns=Object.keys(names).sort();if(!ns.length)h='<p class="cap">還沒有學生資料。</p>';else{h='<div class="tw"><table class="grid"><tr><th>學生</th>'+ST.map(function(s,i){return '<th>第'+NUM[i]+'站</th>';}).join('')+'<th>問卷</th></tr>';ns.forEach(function(n){h+='<tr><td><b>'+esc(n)+'</b></td>';ST.forEach(function(s,i){var a=AD.works.filter(function(w){return w.name===n&&w.station===i;}),w=a[a.length-1];h+='<td>'+(w?'<span class="pill '+SL[w.status][1]+'" style="margin:0">'+SL[w.status][0]+'</span>':'—')+'</td>';});h+='<td>'+(AD.surveys.some(function(x){return x.name===n;})?'已填':'—')+'</td></tr>';});h+='</table></div>';}}
  else if(tab===4){h=window.ARENA?window.ARENA.adminHtml():'';}
  else if(tab===5){h=window.CLASSX?window.CLASSX.adminHtml():'';}
- else{if(!AD.surveys.length)h='<p class="cap">還沒有人填問卷。</p>'+svLink();else{h=svSum()+'<div class="tw"><table class="grid"><tr><th>學生</th>'+Q.map(function(q){return '<th>'+esc(q[1].replace(/（可複選）/,'').slice(0,14))+'</th>';}).join('')+'</tr>';AD.surveys.forEach(function(x){h+='<tr><td><b>'+esc(x.name)+'</b></td>'+Q.map(function(q){return '<td>'+esc((x.answers||{})[q[0]]||'')+'</td>';}).join('')+'</tr>';});h+='</table></div>';}}
+ else{/* v2.2：最上面是課前問卷總表（誰還沒填、名字對應、下載），全班統計收在下面 */h=window.SVX?window.SVX.html(AD):'';if(!AD.surveys.length)h+='<p class="cap">還沒有人填問卷。</p>'+svLink();else h+='<details class="sxd"><summary>全班回答統計</summary>'+svSum()+'</details>';}
  if(LOCAL)h='<p class="cap" style="margin-bottom:.8rem">示範模式：這裡只看得到在這台瀏覽器上交的資料。接上雲端後，會看到所有學生的。</p>'+h;$('#abody').innerHTML=h;}
 $('#atabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(!b)return;var was=tab;tab=+b.dataset.tab;if(tab===4&&window.ARENA)window.ARENA.adminLoad();else if(tab===5&&window.CLASSX)window.CLASSX.adminLoad();else adminPaint();});
 $('#abody').addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;var row=b.closest('.arow'),act=b.dataset.act,d={id:row.dataset.id,feedback:row.querySelector('textarea').value.trim()};if(act==='star'){d.status='public';d.star=true;}else{d.status=act;if(act!=='public')d.star=false;}var w0=AD.works.filter(function(w){return w.id===d.id;})[0],snap=w0?JSON.stringify(w0):null;if(w0){w0.status=d.status;if(d.star!==undefined)w0.star=d.star;w0.feedback=d.feedback;}++adSeq;adminPaint();C.toast(act==='returned'?'已退回，他會看到你的回饋':act==='pending'?'已取消公開':'已公開到作品牆');C.beep(880,.1);
@@ -4877,6 +4878,156 @@ box.addEventListener('click',function(e){var b=e.target.closest('[data-id]');if(
 setInterval(paintStuck,1500);setInterval(sync,2500);
 setInterval(function(){var b=$('#stuckbox');if(b&&!b.hidden&&!b.querySelector('.stk2').hidden&&!document.hidden)A.refresh();},20000);
 window.CLASSX={sync:sync,adminLoad:adminLoad,adminHtml:adminHtml};sync();
+})();
+
+</script>
+<script>
+/* ===== 課前問卷總表（v2.2）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
+(function(){
+'use strict';
+var A=window.APP,C=window.CORE,esc=A.esc;
+var QL={job:'行業和工作',freq:'用 AI 的頻率',tools:'用過的 AI',work:'最想帶走的作品',use:'作品要用在哪裡',pain:'每週重複、最想交給 AI 的事',skill:'有沒有寫 Skill 的習慣',hope:'對這堂課的期待',help:'最需要老師協助的地方',dev:'上課帶的設備'};
+var KEYS=Object.keys(QL),AD=null,OPEN={};
+function toast(m){if(C&&C.toast)C.toast(m);}
+function when(ts){var d=new Date(+ts);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+function noPC(a){return !/筆電/.test((a&&a.dev)||'');}
+function coName(){var c=AD.cohort;return c==='*'?'全部梯次':(c?c+' 梯次':'沒填梯次');}
+function coShort(){var c=AD.cohort;return c==='*'?'全部':(c||'未分梯');}
+
+/* 名單只算正取和試聽；名單外自己打名字進來的人，填了問卷才會出現在「名字對不上」 */
+function M(){var R=(AD.roster||[]).filter(function(x){return x.role==='正取'||x.role==='試聽';}),names=R.map(function(x){return x.name;}),role={};R.forEach(function(x){role[x.name]=x.role;});
+ var map=AD.svmap||{},self=(AD.svself||[]).map(function(x){return String(x).toLowerCase();}),by={},extra=[];
+ (AD.surveys||[]).slice().sort(function(a,b){return a.ts-b.ts;}).forEach(function(s){var n=s.name,to=map[n];if(to==='-')return;var who=role[n]?n:(to&&role[to]?to:'');if(who)by[who]={ts:s.ts,a:s.answers||{},as:n};else extra.push(s);});
+ var done=names.filter(function(n){return by[n];}),todo=names.filter(function(n){return !by[n];});
+ return {names:names,role:role,by:by,extra:extra,done:done,todo:todo,self:self,
+  dev:done.filter(function(n){return noPC(by[n].a);}).length+extra.filter(function(s){return noPC(s.answers);}).length,
+  roles:['正取','試聽'].map(function(r){var all=names.filter(function(n){return role[n]===r;}),d=all.filter(function(n){return by[n];}).length;return {r:r,all:all.length,d:d,p:all.length?Math.round(d/all.length*100):0};})};}
+/* 猜是誰：名字被包在全名裡（冠文→邱冠文），或同樣長度只差一個字（柯明章→柯明璋）；只從還沒填的人裡面猜 */
+function guess(n,X){if(X.self.indexOf(String(n).toLowerCase())>=0||n.length<2)return null;var c=X.todo.filter(function(x){if(x.indexOf(n)>=0&&x!==n)return true;if(x.length===n.length&&x.length>=3){var d=0;for(var i=0;i<x.length;i++)if(x[i]!==n[i])d++;return d===1;}return false;});return c.length===1?c[0]:null;}
+
+var css=document.createElement('style');css.textContent=
+'.sx{--sr:#ff8fa3;--sg:#6fe3a5}.sx .sxh{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;justify-content:space-between;margin-bottom:.9rem}.sx .sxh h3{margin:0;font-size:1.25rem;letter-spacing:-.01em}.sx .sxh h3 small{display:block;font-size:.78rem;color:var(--mut);font-weight:600;margin-top:.2rem}'+
+'.sx .sxa{display:flex;flex-wrap:wrap;gap:.45rem}.sx .sxa .chip{min-height:2.4rem;padding:.45rem .95rem;font-size:.84rem}.sx .sxa .chip.pri{background:var(--c2);color:#1a1400;border-color:var(--c2)}.sx .chip:active{transform:scale(.97)}.sx .chip[disabled]{opacity:.55;cursor:progress}'+
+'.sx .sxk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:.6rem}.sx .sxk div{border:1px solid var(--line);border-radius:1rem;padding:.75rem .9rem;background:var(--glass)}.sx .sxk b{display:block;font-size:1.9rem;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}.sx .sxk span{font-size:.76rem;color:var(--mut);font-weight:700}'+
+'.sx .sxk .r b{color:var(--sr)}.sx .sxk .g b{color:var(--sg)}.sx .sxk .y b{color:var(--c2)}'+
+'.sx .sxb{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}.sx .sxb div{border:1px solid var(--line);border-radius:1rem;padding:.65rem .9rem;background:var(--glass);font-weight:800;font-size:.86rem}.sx .sxb em{float:right;font-style:normal;color:var(--mut)}.sx .sxb i{display:block;height:.5rem;border-radius:99px;background:rgba(255,255,255,.08);margin-top:.45rem;overflow:hidden}.sx .sxb u{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3fd68a,var(--sg))}'+
+'.sx h4{font-size:1rem;margin:1.2rem 0 .3rem;display:flex;align-items:center;gap:.5rem}.sx h4 span{font-size:.74rem;font-weight:900;border-radius:99px;padding:.1rem .6rem}.sx h4 .r{background:rgba(255,143,163,.15);color:var(--sr)}.sx h4 .y{background:rgba(255,212,0,.14);color:var(--c2)}.sx h4 .g{background:rgba(111,227,165,.14);color:var(--sg)}'+
+'.sx .sxs{color:var(--mut);font-size:.8rem;margin:0 0 .6rem}.sx .sxg{border:1px solid var(--line);border-radius:1rem;padding:.7rem .9rem;margin-bottom:.6rem;background:var(--glass)}.sx .sxg h5{margin:0 0 .5rem;font-size:.8rem;color:var(--mut)}'+
+'.sx .sxn{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr));gap:.4rem}.sx .sxn span{display:block;padding:.45rem .65rem;border-radius:.7rem;border:1px solid var(--line);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+'.sx .sxf{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .6rem;border:1px solid rgba(255,212,0,.35);border-radius:1rem;padding:.65rem .9rem;margin-bottom:.5rem;background:rgba(255,212,0,.04)}.sx .sxf b{font-size:1rem;min-width:4.5em}.sx .sxf .hint{color:var(--mut);font-size:.8rem;flex:1;min-width:10em}.sx .sxf .hint b{font-size:inherit;color:var(--ink)}'+
+'.sx .sxf select{font:inherit;font-size:.86rem;color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:.6rem;padding:.45rem .5rem;min-height:2.4rem}.sx .sxf select option{color:#111}'+
+'.sx .sxm{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 .4rem}.sx .sxm .chip{font-size:.74rem}'+
+'.sx table.grid tr.sxr{cursor:pointer}.sx table.grid tr.sxr:hover td{background:rgba(255,255,255,.03)}.sx td.nm{font-weight:900;white-space:nowrap}.sx td.nm small{display:block;color:var(--mut);font-weight:600;font-size:.72rem}.sx .tg{display:inline-block;font-size:.68rem;font-weight:800;border-radius:.35rem;padding:0 .4rem;background:rgba(91,124,255,.18);color:#b9c7ff;margin-left:.3rem}.sx .tg.w{background:rgba(255,212,0,.16);color:var(--c2);margin:0}'+
+'.sx tr.sxo td{background:rgba(255,255,255,.025);font-size:.8rem}.sx tr.sxo dl{display:grid;grid-template-columns:8.5em 1fr;gap:.25rem .8rem;margin:0}.sx tr.sxo dt{color:var(--mut)}.sx tr.sxo dd{margin:0}'+
+'.sxd{margin-top:1.4rem}.sxd>summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--mut);padding:.4rem 0}'+
+'@media (max-width:760px){.sx .sxk{grid-template-columns:1fr 1fr}.sx .sxb{grid-template-columns:1fr}.sx .hide-s{display:none}.sx .sxa .chip,.sx .sxf .chip,.sx .sxf select{min-height:2.75rem}.sx .sxa{width:100%}.sx .sxa .chip{flex:1 1 auto}.sx .sxf select{flex:1 1 100%}}'+
+'#sxprint{display:none}@media print{body.sxp>*:not(#sxprint){display:none!important}body.sxp{background:#fff!important}body.sxp>#sxprint{display:block!important}#sxprint .rep{width:auto!important}@page{size:A4 landscape;margin:10mm}}';
+document.head.appendChild(css);
+
+function html(ad){AD=ad;var X=M(),h='<div class="sx">';
+ h+='<div class="sxh"><h3>課前問卷總表<small>'+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</small></h3><div class="sxa">'+
+  '<button class="chip pri" data-sx="copy"'+(X.names.length?'':' disabled')+'>複製還沒填的名單</button><button class="chip" data-sx="xlsx">下載 Excel</button><button class="chip" data-sx="pdf">下載 PDF</button><button class="chip" data-sx="print">列印</button></div></div>';
+ if(!X.names.length)h+='<p class="sxs">這一梯還沒有正取或試聽的名單，所以算不出誰還沒填。先到「名單和出席」把名單加好；下面先列出已經填的人。</p>';
+ else{
+  h+='<div class="sxk"><div><b>'+X.names.length+'</b><span>名單上的人</span></div><div class="g"><b>'+X.done.length+'</b><span>已經填了</span></div><div class="r"><b>'+X.todo.length+'</b><span>還沒填</span></div><div class="y"><b>'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
+  h+='<div class="sxb">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了<em>'+r.p+'%</em><i><u style="width:'+r.p+'%"></u></i></div>';}).join('')+'</div>';
+  h+='<h4>還沒填 <span class="r">'+X.todo.length+' 人</span></h4><p class="sxs">按「複製還沒填的名單」，貼到 LINE 給業務去提醒。</p>';
+  h+=['正取','試聽'].map(function(r){var l=X.todo.filter(function(n){return X.role[n]===r;});return l.length?'<div class="sxg"><h5>'+r+'（'+l.length+'）</h5><div class="sxn">'+l.map(function(n){return '<span title="'+esc(n)+'">'+esc(n)+'</span>';}).join('')+'</div></div>':'';}).join('')||'<div class="sxg">全部都填了。</div>';
+  if(X.extra.length){h+='<h4>名字對不上，要你確認 <span class="y">'+X.extra.length+' 份</span></h4><p class="sxs">有人填問卷時沒打全名，系統對不到名單。選他是誰按確認，之後就算他已填。</p>';
+   X.extra.forEach(function(s){var n=s.name,g=guess(n,X),me=X.self.indexOf(String(n).toLowerCase())>=0,a=s.answers||{};
+    h+='<div class="sxf" data-n="'+esc(n)+'"><b>'+esc(n)+'</b><span class="hint">'+(me?'看起來是你自己測試填的，按「不算」就好':g?'看起來是 <b>'+esc(g)+'</b>（'+X.role[g]+'），對的話按確認':esc(a.job||'')+'・'+when(s.ts)+' 填的')+'</span>'+
+     '<select aria-label="'+esc(n)+' 是名單上的誰"><option value="">他是名單上的誰？</option>'+X.todo.map(function(x){return '<option'+(x===g?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select><button class="chip pri" data-sx="ok">確認</button><button class="chip" data-sx="skip">不算</button></div>';});}
+  var mp=AD.svmap||{},mk=Object.keys(mp).filter(function(k){return (AD.surveys||[]).some(function(s){return s.name===k;});});
+  if(mk.length)h+='<div class="sxm"><span class="sxs" style="margin:0;align-self:center">已經對應過：</span>'+mk.map(function(k){return '<button class="chip" data-sx="undo" data-n="'+esc(k)+'" title="按一下取消">'+esc(k)+' → '+(mp[k]==='-'?'不算':esc(mp[k]))+'　×</button>';}).join('')+'</div>';}
+ var rows=X.done.slice().sort(function(a,b){return X.by[a].ts-X.by[b].ts;}).map(function(n){var r=X.by[n];return {n:n,role:X.role[n],as:r.as,a:r.a,ts:r.ts};});
+ if(!X.names.length)rows=rows.concat(X.extra.map(function(s){return {n:s.name,role:'',as:s.name,a:s.answers||{},ts:s.ts};}));
+ h+='<h4>已經填了 <span class="g">'+rows.length+' 人</span></h4><p class="sxs">點一列看他十題的完整回答，沒帶筆電的標黃色。</p>';
+ if(rows.length){h+='<div class="tw"><table class="grid"><tr><th>姓名</th><th>行業和工作</th><th>最想帶走的作品</th><th class="hide-s">最需要協助</th><th class="hide-s">每週最想交給 AI 的事</th><th>設備</th><th class="hide-s">填寫時間</th></tr>';
+  rows.forEach(function(r){var a=r.a;h+='<tr class="sxr" data-n="'+esc(r.n)+'"><td class="nm">'+esc(r.n)+(r.role?'<span class="tg">'+r.role+'</span>':'')+(r.as!==r.n?'<small>問卷上寫「'+esc(r.as)+'」</small>':'')+'</td><td>'+esc(a.job)+'</td><td>'+esc(a.work)+'</td><td class="hide-s">'+esc(a.help)+'</td><td class="hide-s">'+esc(a.pain)+'</td><td>'+(noPC(a)?'<span class="tg w">'+esc(a.dev||'沒填')+'</span>':esc(a.dev))+'</td><td class="hide-s">'+when(r.ts)+'</td></tr>';
+   if(OPEN[r.n])h+=more(a);});h+='</table></div>';}
+ return h+'</div>';}
+function more(a){return '<tr class="sxo"><td colspan="7"><dl>'+KEYS.map(function(k){return '<dt>'+QL[k]+'</dt><dd>'+esc(a[k]||'—')+'</dd>';}).join('')+'</dl></td></tr>';}
+
+/* 對應存回雲端；畫面先改，失敗再改回來 */
+function setMap(from,v,msg){var old=JSON.parse(JSON.stringify(AD.svmap||{})),d={from:from};AD.svmap=AD.svmap||{};
+ if(v===null){delete AD.svmap[from];d.clear=true;}else if(v==='-'){AD.svmap[from]='-';d.skip=true;}else{AD.svmap[from]=v;d.to=v;}
+ A.adminPaint();toast(msg);
+ A.api('survey_map',d,function(r){if(r&&r.ok){if(r.svmap)AD.svmap=r.svmap;return;}AD.svmap=old;A.adminPaint();toast((r&&r.msg)||'剛剛沒有存成功，請再按一次');});}
+
+function copyText(t,ok){function fb(){var x=document.createElement('textarea');x.value=t;x.setAttribute('readonly','');x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();var g=false;try{g=document.execCommand('copy');}catch(e){}x.remove();toast(g?ok:'複製不了，請長按選取文字');}
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast(ok);},fb);else fb();}
+function lineText(){var X=M(),l=['正取','試聽'].map(function(r){var x=X.todo.filter(function(n){return X.role[n]===r;});return x.length?r+' '+x.length+' 位：'+x.join('、'):'';}).filter(Boolean);
+ var u=location.href.split('#')[0].split('?')[0]+'?survey';
+ if(!l.length)return 'AI 實戰課 '+coShort()+' 課前問卷，名單上的人都填好了，謝謝大家';
+ return 'AI 實戰課 '+coShort()+' 課前問卷，這幾位還沒填，幫我提醒他們填一下\n填好我才能先幫他想好上課要做的作品\n\n'+l.join('\n')+'\n\n問卷連結：'+u;}
+
+/* ---------- 下載：按下去才載入工具，網站平常不會變慢 ---------- */
+var CL={navy:'0B1F3A',cream:'FFF5E1',coral:'FF6F61',coralT:'C0392B',green:'1E7A4F',yellow:'FFE58A',line:'D9DEE8',sub:'55627A'},LIB={};
+function loadJs(src){if(LIB[src])return LIB[src];LIB[src]=new Promise(function(ok,no){var x=document.createElement('script');x.src=src;x.onload=ok;x.onerror=function(){delete LIB[src];x.remove();no(new Error('載入失敗'));};document.head.appendChild(x);});return LIB[src];}
+function stamp(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function fname(ext){return '課前問卷總表_'+coShort()+'_'+stamp()+'.'+ext;}
+function busy(b,on){if(on){b._t=b.textContent;b.textContent='準備中…';b.disabled=true;}else{b.textContent=b._t;b.disabled=false;}}
+function save(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);}
+function doneRows(X){var r=X.done.slice().sort(function(a,b){return X.by[a].ts-X.by[b].ts;}).map(function(n){var o=X.by[n];return {n:n,role:X.role[n],as:o.as,a:o.a,ts:o.ts,ex:false};});
+ return r.concat(X.extra.map(function(s){return {n:s.name,role:'名單外',as:s.name,a:s.answers||{},ts:s.ts,ex:true};}));}
+
+function buildXlsx(){var X=M(),wb=new window.ExcelJS.Workbook();wb.creator='AI 實戰課';
+ var font='PingFang TC',thin={style:'thin',color:{argb:'FF'+CL.line}},box={top:thin,left:thin,bottom:thin,right:thin};
+ function fill(c){return {type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}};}
+ function head(ws,row){ws.getRow(row).eachCell(function(c){c.font={name:font,bold:true,color:{argb:'FFFFFFFF'},size:11};c.fill=fill(CL.navy);c.alignment={vertical:'middle',horizontal:'left',wrapText:true};c.border=box;});ws.getRow(row).height=26;}
+ function page(ws){ws.pageSetup={paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}};ws.headerFooter.oddFooter='&L課前問卷總表 '+coShort()+'&R第 &P / &N 頁';ws.views=[Object.assign({},(ws.views&&ws.views[0])||{},{showGridLines:false})];}
+ var o=wb.addWorksheet('總覽',{properties:{tabColor:{argb:'FF'+CL.navy}}});page(o);o.columns=[{width:4},{width:22},{width:22},{width:22},{width:22},{width:4}];
+ o.mergeCells('B2:E2');o.getCell('B2').value='課前問卷總表';o.getCell('B2').font={name:font,size:24,bold:true,color:{argb:'FF'+CL.navy}};o.getRow(2).height=40;
+ o.mergeCells('B3:E3');o.getCell('B3').value='AI 實戰課 '+coName()+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now());o.getCell('B3').font={name:font,size:11,color:{argb:'FF'+CL.sub}};
+ [['名單上的人',X.names.length,CL.navy],['已經填了',X.done.length,CL.green],['還沒填',X.todo.length,CL.coralT],['沒帶筆電（上課多照顧）',X.dev,'9A6B00']].forEach(function(k,i){var col=String.fromCharCode(66+i),v=o.getCell(col+'5'),l=o.getCell(col+'6');v.value=k[1];v.font={name:font,size:30,bold:true,color:{argb:'FF'+k[2]}};l.value=k[0];l.font={name:font,size:11,color:{argb:'FF'+CL.sub}};
+  [v,l].forEach(function(c){c.fill=fill(CL.cream);c.alignment={horizontal:'left',vertical:'middle',indent:1};c.border={left:{style:'medium',color:{argb:'FF'+k[2]}}};});});o.getRow(5).height=44;o.getRow(6).height=22;
+ o.getCell('B8').value='身分';o.getCell('C8').value='名單';o.getCell('D8').value='填了';o.getCell('E8').value='填寫率';head(o,8);['B8','C8','D8','E8'].forEach(function(a){o.getCell(a).alignment={horizontal:'left',vertical:'middle',indent:1};});
+ X.roles.forEach(function(r,i){var row=o.getRow(9+i);row.values=[null,r.r,r.all,r.d,r.all?r.d/r.all:0];row.height=24;row.eachCell(function(c){c.font={name:font,size:12};c.border=box;c.alignment={vertical:'middle',horizontal:'left',indent:1};});row.getCell(5).numFmt='0%';});
+ if(X.extra.length){o.mergeCells('B12:E12');var e=o.getCell('B12');e.value='另外有 '+X.extra.length+' 份問卷名字對不上名單（'+X.extra.map(function(s){return s.name;}).join('、')+'），在「已填」那頁最下面';e.font={name:font,size:11,color:{argb:'FF'+CL.coralT}};e.alignment={wrapText:true};o.getRow(12).height=34;}
+ var t=wb.addWorksheet('還沒填（'+X.todo.length+'）',{properties:{tabColor:{argb:'FF'+CL.coral}},views:[{state:'frozen',ySplit:1,showGridLines:false}]});page(t);
+ t.columns=[{header:'序',width:6},{header:'姓名',width:16},{header:'身分',width:10},{header:'已提醒（打勾或填日期）',width:24},{header:'備註',width:40}];head(t,1);
+ var n=0;['正取','試聽'].forEach(function(r){var l=X.todo.filter(function(x){return X.role[x]===r;});if(!l.length)return;var g=t.addRow([r+' '+l.length+' 位']);t.mergeCells(g.number,1,g.number,5);g.getCell(1).font={name:font,bold:true,color:{argb:'FF'+CL.navy}};g.getCell(1).fill=fill(CL.cream);g.height=22;
+  l.forEach(function(x){n++;var w=t.addRow([n,x,r,'','']);w.height=24;w.eachCell({includeEmpty:true},function(c){c.font={name:font,size:12};c.border=box;c.alignment={vertical:'middle'};});w.getCell(2).font={name:font,size:12,bold:true};});});
+ t.autoFilter={from:'A1',to:'E1'};
+ var rows=doneRows(X),f=wb.addWorksheet('已填（'+rows.length+'）',{properties:{tabColor:{argb:'FF'+CL.green}},views:[{state:'frozen',ySplit:1,xSplit:1,showGridLines:false}]});page(f);
+ var W={job:22,freq:10,tools:20,work:18,use:18,pain:22,skill:18,hope:26,help:30,dev:10};
+ f.columns=[{header:'姓名',width:12},{header:'身分',width:8},{header:'問卷上的名字',width:12},{header:'填寫時間',width:12}].concat(KEYS.map(function(k){return {header:QL[k],width:W[k]};}));head(f,1);f.getRow(1).height=36;
+ function fitH(w){var L=1;w.eachCell(function(c,i){var wd=f.getColumn(i).width||10,per=Math.max(1,Math.floor(wd/2.05)),s=String(c.value==null?'':c.value),k=0;s.split('\n').forEach(function(x){var u=0;for(var j=0;j<x.length;j++)u+=x.charCodeAt(j)>255?1:.55;k+=Math.max(1,Math.ceil(u/per));});L=Math.max(L,k);});w.height=Math.max(20,L*16+8);}
+ function put(vals,odd,nopc){var w=f.addRow(vals);fitH(w);w.eachCell({includeEmpty:true},function(c,i){c.font={name:font,size:11,bold:i===1};c.border=box;c.alignment={vertical:'top',wrapText:true};if(odd)c.fill=fill('F7F8FB');});
+  if(nopc){var d=w.getCell(4+KEYS.length);d.fill=fill(CL.yellow);d.font={name:font,size:11,bold:true,color:{argb:'FF7A5200'}};}}
+ var ins=rows.filter(function(r){return !r.ex;}),exs=rows.filter(function(r){return r.ex;});
+ ins.forEach(function(r,i){put([r.n,r.role,r.as!==r.n?r.as:'',when(r.ts)].concat(KEYS.map(function(k){return r.a[k]||'';})),i%2===1,noPC(r.a));});
+ if(exs.length){var g=f.addRow(['名字還沒對應 '+exs.length+' 份：填問卷時沒打全名，名單上找不到，到後台按一下對應']);f.mergeCells(g.number,1,g.number,4+KEYS.length);g.getCell(1).font={name:font,bold:true,color:{argb:'FF'+CL.coralT}};g.getCell(1).fill=fill('FFF0EE');g.height=24;
+  exs.forEach(function(r,i){put([r.n,'名單外',r.as,when(r.ts)].concat(KEYS.map(function(k){return r.a[k]||'';})),i%2===1,noPC(r.a));});}
+ f.autoFilter={from:{row:1,column:1},to:{row:1,column:4+KEYS.length}};
+ return wb.xlsx.writeBuffer().then(function(buf){return new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});});}
+
+/* 白底報表：PDF 和列印共用同一份 */
+function report(){var X=M(),h='<div class="rep"><style>.rep{width:1000px;box-sizing:border-box;background:#fff;color:#16213a;font:13px/1.55 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:6px;text-align:left}.rep h1{margin:0;font-size:28px;color:#0B1F3A}.rep .s{color:#55627A;font-size:13px;margin:4px 0 14px}.rep .k{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}.rep .k div{background:#FFF5E1;border-left:4px solid;border-radius:8px;padding:10px 14px}.rep .k b{display:block;font-size:30px;line-height:1.1}.rep .k span{color:#55627A;font-size:12px}.rep .bs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}.rep .bs div{border:1px solid #D9DEE8;border-radius:8px;padding:8px 12px;font-weight:700}.rep .tr{height:8px;border-radius:9px;background:#EEF1F6;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep .tr i{display:block;height:8px;border-radius:9px;background:#1E7A4F}.rep h2{font-size:17px;margin:14px 0 8px;color:#0B1F3A}.rep h2 em{font-style:normal;font-size:12px;font-weight:800;border-radius:9px;padding:1px 8px;margin-left:6px}.rep .rg{border:1px solid #D9DEE8;border-radius:8px;padding:8px 12px;margin-bottom:8px;break-inside:avoid}.rep .rg h3{margin:0 0 6px;font-size:13px;color:#55627A}.rep .rk{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.rep .rk span{border:1px solid #C9CFDB;border-radius:6px;padding:5px 7px;font-weight:700}.rep .rk span:before{content:"";display:inline-block;width:11px;height:11px;border:1.4px solid #55627A;border-radius:3px;margin-right:6px;vertical-align:-1px}.rep table{width:100%;border-collapse:collapse}.rep th{background:#0B1F3A;color:#fff;text-align:left;font-size:12px;padding:6px 8px}.rep td{border-bottom:1px solid #E3E7EE;padding:6px 8px;vertical-align:top;font-size:12px}.rep tr{break-inside:avoid}.rep tr:nth-child(even) td{background:#F7F8FB}.rep .y{background:#FFE58A!important;font-weight:800}.rep .t{font-size:11px;color:#55627A}.rep .pb{page-break-before:always;break-before:page}.rep th:nth-child(2),.rep td:nth-child(2),.rep th:nth-child(7),.rep td:nth-child(7),.rep th:nth-child(8),.rep td:nth-child(8){white-space:nowrap}.rep *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
+ h+='<h1>課前問卷總表</h1><div class="s">AI 實戰課 '+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</div>';
+ if(X.names.length){h+='<div class="k"><div style="border-color:#0B1F3A"><b style="color:#0B1F3A">'+X.names.length+'</b><span>名單上的人</span></div><div style="border-color:#1E7A4F"><b style="color:#1E7A4F">'+X.done.length+'</b><span>已經填了</span></div><div style="border-color:#C0392B"><b style="color:#C0392B">'+X.todo.length+'</b><span>還沒填</span></div><div style="border-color:#9A6B00"><b style="color:#9A6B00">'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
+  h+='<div class="bs">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了（'+r.p+'%）<div class="tr"><i style="width:'+r.p+'%"></i></div></div>';}).join('')+'</div>';
+  h+='<h2>還沒填<em style="background:#FDECEA;color:#C0392B">'+X.todo.length+' 人</em></h2>'+['正取','試聽'].map(function(r){var l=X.todo.filter(function(x){return X.role[x]===r;});return l.length?'<div class="rg"><h3>'+r+' '+l.length+' 位</h3><div class="rk">'+l.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div></div>':'';}).join('');}
+ var rows=doneRows(X);
+ h+='<h2'+(X.names.length?' class="pb"':'')+'>已經填了<em style="background:#E6F4EC;color:#1E7A4F">'+rows.length+' 份</em></h2><table><thead><tr><th>姓名</th><th>身分</th><th>行業和工作</th><th>最想帶走的作品</th><th>最需要協助</th><th>每週最想交給 AI 的事</th><th>設備</th><th>填寫時間</th></tr></thead><tbody>'+
+  rows.map(function(r){var a=r.a;return '<tr><td><b>'+esc(r.n)+'</b>'+(r.ex?'<div class="t">名字還沒對應</div>':r.as!==r.n?'<div class="t">問卷上寫「'+esc(r.as)+'」</div>':'')+'</td><td>'+esc(r.role)+'</td><td>'+esc(a.job)+'</td><td>'+esc(a.work)+'</td><td>'+esc(a.help)+'</td><td>'+esc(a.pain)+'</td><td'+(noPC(a)?' class="y"':'')+'>'+esc(a.dev)+'</td><td>'+when(r.ts)+'</td></tr>';}).join('')+'</tbody></table></div>';
+ return h;}
+
+function doPrint(){var old=document.getElementById('sxprint');if(old)old.remove();var d=document.createElement('div');d.id='sxprint';d.innerHTML=report();document.body.appendChild(d);document.body.classList.add('sxp');
+ var done=function(){document.body.classList.remove('sxp');d.remove();window.removeEventListener('afterprint',done);};window.addEventListener('afterprint',done);
+ setTimeout(function(){window.print();setTimeout(function(){if(document.body.classList.contains('sxp')&&!matchMedia('print').matches)done();},1500);},60);}
+
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-sx]');if(!b||!AD)return;var k=b.dataset.sx;
+ if(k==='copy')copyText(lineText(),'已複製，可以貼到 LINE 了');
+ else if(k==='print')doPrint();
+ else if(k==='xlsx'){busy(b,true);(window.ExcelJS?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')).then(buildXlsx).then(function(blob){save(blob,fname('xlsx'));toast('Excel 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
+ else if(k==='pdf'){busy(b,true);(window.html2pdf?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).then(function(){return window.html2pdf().set({margin:[8,8,10,8],filename:fname('pdf'),image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['tr','.rg','.rk']}}).from(report(),'string').save();}).then(function(){toast('PDF 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
+ else if(k==='ok'||k==='skip'){var box=b.closest('.sxf'),n=box.dataset.n;if(k==='skip'){setMap(n,'-',n+' 不列入這一梯');return;}var v=box.querySelector('select').value;if(!v){toast('先選他是誰');return;}setMap(n,v,'好，'+n+' 就是 '+v);}
+ else if(k==='undo'){var u=b.dataset.n;setMap(u,null,'已取消 '+u+' 的對應');}});
+document.addEventListener('click',function(e){var tr=e.target.closest&&e.target.closest('.sx tr.sxr');if(!tr)return;var n=tr.dataset.n,nx=tr.nextElementSibling;if(nx&&nx.classList.contains('sxo')){nx.remove();delete OPEN[n];return;}
+ var X=M(),r=X.by[n]||(X.extra.filter(function(s){return s.name===n;})[0]||{}),a=r.a||r.answers||{};OPEN[n]=1;tr.insertAdjacentHTML('afterend',more(a));});
+
+window.SVX={html:html,_lineText:lineText,_model:function(){return M();}};
 })();
 
 </script>
