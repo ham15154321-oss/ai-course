@@ -203,6 +203,8 @@ table.grid{width:100%;border-collapse:collapse;font-size:.84rem}table.grid th,ta
 .keys{display:none;font-size:.76rem;color:var(--mut);margin-top:1rem}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation:none!important}#st{clip-path:none;opacity:0;transition:opacity .2s,visibility 0s .2s!important}#st.open{opacity:1;clip-path:none;transition:opacity .2s!important}}
 @media (prefers-reduced-transparency:reduce){header,.card,.panel,.work,#st,#pod{backdrop-filter:none;-webkit-backdrop-filter:none;background:#0b0e1f}}
+body.voteonly #aur,body.voteonly #wm,body.voteonly #gl,body.voteonly #orbs,body.voteonly #labs,body.voteonly #intro,body.voteonly #home,body.voteonly #st,body.voteonly #back,body.voteonly #adminBtn,body.voteonly #matpill,body.voteonly #linepill,body.voteonly #stuckBtn,body.voteonly .rail{display:none!important}
+body.voteonly{background:radial-gradient(900px 500px at 50% -10%,#1b2556 0,transparent 60%),#05070f;min-height:100svh}
 </style>
 </head>
 <body>
@@ -211,6 +213,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:.84rem}table.grid th,ta
 window.SITE_CONFIG={api:'https://script.google.com/macros/s/AKfycbwKLFyBjzDlG6-Dm9PhR3XwYYW0FIkJgN2JO1LK8ugRsELl-HhGrJXYovhXQtRsrWoBgw/exec'};
 </script>
 
+<script>if(/[?&]vote\b/.test(location.search))document.body.classList.add('voteonly');</script>
 <div id="aur" aria-hidden="true"><i></i><i></i></div>
 <div id="wm" aria-hidden="true">FLEET</div>
 <canvas id="gl"></canvas>
@@ -587,7 +590,7 @@ addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(document.
 var itm=[],iw=$('#iw');
 var started=false;function endIntro(){itm.forEach(clearTimeout);$('#intro').classList.add('off');if(!started){started=true;setTimeout(function(){window.APP&&window.APP.start();},50);}}
 function introStep(html,t0,dur){itm.push(setTimeout(function(){iw.className='w';iw.innerHTML=html;void iw.offsetWidth;iw.classList.add('on');},t0));itm.push(setTimeout(function(){iw.classList.add('out');},t0+dur));}
-if(RM||/[?&]nointro/.test(location.search)){addEventListener('load',endIntro);}else{
+if(RM||/[?&](nointro|vote)\b/.test(location.search)){addEventListener('load',endIntro);}else{
  introStep('今天不學工具',300,1300);introStep('學怎麼<em>帶一支艦隊</em>',2000,1500);
  itm.push(setTimeout(function(){[].forEach.call($('#idots').children,function(d,i){setTimeout(function(){d.classList.add('on');beep(440+i*110,.12,'triangle');},i*140);});},3700));
  introStep('AI 艦隊<em>指揮中心</em>',4500,1800);itm.push(setTimeout(endIntro,6700));
@@ -595,7 +598,9 @@ if(RM||/[?&]nointro/.test(location.search)){addEventListener('load',endIntro);}e
 
 /* ---------- main loop ---------- */
 var last=performance.now(),sY=0,portrait=false,qn=0,qt=0;
-function frame(now){var rdt=Math.min((now-last)/1000,1),dt=Math.min(rdt,.05);last=now;sY=scrollY;portrait=W/H<.8;
+function frame(now){var rdt=Math.min((now-last)/1000,1),dt=Math.min(rdt,.05);last=now;
+ var bm=document.body.dataset.modal;if(document.body.classList.contains('voteonly')||bm==='vote'||bm==='arena'||bm==='admin'||document.hidden){fxtick(Math.min(rdt,.1));requestAnimationFrame(frame);return;}
+ sY=scrollY;portrait=W/H<.8;
  var sp=$('#split'),st=sp.offsetTop,pp=Math.max(0,Math.min(1,(sY-st+H*.62)/(sp.offsetHeight-H*.55))),cx=Math.max(0,Math.min(1,pp/.52)),ex=Math.max(0,Math.min(1,(pp-.62)/.38));
  var rsE=$('#routeSec'),fnE=$('#fin'),dS=rsE.offsetTop-H*.55,dE=fnE.offsetTop-H*.7,inFin=sY>fnE.offsetTop-H*.12,dx=inFin?0:Math.max(0,Math.min(1,(sY-dS)/Math.max(1,dE-dS)));
  if(inFin){ex=0;cx=1;}var rt=Math.min(1,dt*(inFin||wasFin2>0?15:9));if(inFin!==wasFin){wasFin=inFin;wasFin2=.9;if(inFin){document.body.classList.add('assembled');finFx=1;}else document.body.classList.remove('assembled');}wasFin2=Math.max(0,wasFin2-dt);
@@ -768,13 +773,15 @@ function localApi(a,d,cb){var D=db(),r;
  else if(a==='line_set'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.line=String(d.value||'');ls('aifleet_db',D);r={ok:true};}}
  else if(/^(roster_add|roster_del|cohort_set)$/.test(a))r={ok:false,msg:'示範模式沒有名單功能，接上雲端才有'};
  else if(a==='admin_review'){if(!isT())r={ok:false,msg:'沒有權限'};else{D.works.forEach(function(w){if(w.id===d.id){if(d.status)w.status=d.status;if(d.star!==undefined)w.star=d.star;if(d.feedback!==undefined)w.feedback=d.feedback;}});ls('aifleet_db',D);r={ok:true};}}
- else if(a==='vote_state'){var orr=D.rounds.filter(function(x){return x.status==='open';})[0];if(!orr)r={ok:true,round:null};else{var vs={};D.votes.forEach(function(v){if(v.round===orr.id)vs[v.voter]=1;});r={ok:true,round:{id:orr.id,no:orr.no,station:orr.station,mode:orr.mode||'work'},cands:scoreRoundCands(D,orr,localNames(D)).map(function(w){return {id:w.id,name:w.name,title:w.title,note:w.note,link:w.link,fileUrl:'',ts:w.ts};}),mine:D.votes.filter(function(v){return v.round===orr.id&&v.voter===d.name;}).map(function(v){return v.work;}),eligible:scoreEligible(D,d.name),per:scorePer(scoreRoundCands(D,orr,localNames(D)).length),voters:Object.keys(vs).length};}}
+ else if(a==='vote_ping'){var opn=D.rounds.filter(function(x){return x.status==='open';})[0];r={ok:true,rid:opn?opn.id:null,left:opn&&D.vend?Math.max(0,Math.round((D.vend-Date.now())/1000)):null};}
+ else if(a==='round_time'){if(!isT())r={ok:false,msg:'只有老師可以用'};else{D.vend=(D.vend||Date.now())+(+d.add||30)*1000;ls('aifleet_db',D);r={ok:true};}}
+ else if(a==='vote_state'){var orr=D.rounds.filter(function(x){return x.status==='open';})[0];if(!orr)r={ok:true,round:null};else{var vs={};D.votes.forEach(function(v){if(v.round===orr.id)vs[v.voter]=1;});r={ok:true,round:{id:orr.id,no:orr.no,station:orr.station,mode:orr.mode||'work'},cands:scoreRoundCands(D,orr,localNames(D)).map(function(w){return {id:w.id,name:w.name,title:w.title,note:w.note,link:w.link,fileUrl:'',ts:w.ts};}),mine:D.votes.filter(function(v){return v.round===orr.id&&v.voter===d.name;}).map(function(v){return v.work;}),eligible:scoreEligible(D,d.name),per:scorePer(scoreRoundCands(D,orr,localNames(D)).length),voters:Object.keys(vs).length,left:D.vend?Math.max(0,Math.round((D.vend-Date.now())/1000)):null};}}
  else if(a==='vote'){var o2=D.rounds.filter(function(x){return x.status==='open';})[0],ids=(d.works||[]).filter(function(x,i,s){return s.indexOf(x)===i;}),cs={};if(o2)scoreRoundCands(D,o2,localNames(D)).forEach(function(w){cs[w.id]=w.name;});
   if(!o2||o2.id!==d.round)r={ok:false,msg:'這一輪投票已經結束了'};else if(ids.length>scorePer(Object.keys(cs).length))r={ok:false,msg:'這一輪每人最多 '+scorePer(Object.keys(cs).length)+' 票'};else if(ids.some(function(x){return !cs[x];}))r={ok:false,msg:'投票的對象有更新，請重新整理再投一次'};else if(ids.some(function(x){return cs[x]===d.name;}))r={ok:false,msg:'不能投自己'};
   else{D.votes=D.votes.filter(function(v){return !(v.round===o2.id&&v.voter===d.name);});ids.forEach(function(x){D.votes.push({ts:Date.now(),round:o2.id,voter:d.name,work:x});});ls('aifleet_db',D);r={ok:true};}}
  else if(/^(board|round_open|round_close|round_cancel|bonus|bonus_undo|votes_void)$/.test(a)&&!isT())r={ok:false,msg:'只有老師可以用'};
- else if(a==='board'){var bb=scoreBoard(D),op=D.rounds.filter(function(x){return x.status==='open';})[0];r={ok:true,people:bb.people,rounds:bb.rounds,names:localNames(D),open:op?{id:op.id,no:op.no,station:op.station,mode:op.mode||'work',n:scoreRoundCands(D,op,localNames(D)).length}:null,works:D.works,votes:D.votes,bonus:D.bonus,participants:bb.people.length,stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})};}
- else if(a==='round_open'){if(D.rounds.some(function(x){return x.status==='open';}))r={ok:false,msg:'還有一輪投票沒結束，先按「結束投票」'};else{D.rounds.push({id:'r'+Date.now(),no:D.rounds.reduce(function(m,x){return Math.max(m,x.no);},0)+1,station:+d.station,status:'open',open:Date.now(),mode:(d.mode==='pick'||d.mode==='all')?d.mode:'work',names:d.names||[]});ls('aifleet_db',D);r={ok:true};}}
+ else if(a==='board'){var bb=scoreBoard(D),op=D.rounds.filter(function(x){return x.status==='open';})[0];r={ok:true,people:bb.people,rounds:bb.rounds,names:localNames(D),open:op?{id:op.id,no:op.no,station:op.station,mode:op.mode||'work',n:scoreRoundCands(D,op,localNames(D)).length,left:D.vend?Math.max(0,Math.round((D.vend-Date.now())/1000)):null}:null,works:D.works,votes:D.votes,bonus:D.bonus,participants:bb.people.length,stuck:(D.stuck||[]).filter(function(x){return x.status==='open';})};}
+ else if(a==='round_open'){if(D.rounds.some(function(x){return x.status==='open';}))r={ok:false,msg:'還有一輪投票沒結束，先按「結束投票」'};else{D.rounds.push({id:'r'+Date.now(),no:D.rounds.reduce(function(m,x){return Math.max(m,x.no);},0)+1,station:+d.station,status:'open',open:Date.now(),mode:(d.mode==='pick'||d.mode==='all')?d.mode:'work',names:d.names||[]});D.vend=Date.now()+Math.max(20,Math.min(600,+d.dur||60))*1000;ls('aifleet_db',D);r={ok:true};}}
  else if(a==='round_close'||a==='round_cancel'){var o3=D.rounds.filter(function(x){return x.status==='open';})[0];if(!o3)r={ok:false,msg:'現在沒有在投票'};else{if(a==='round_close'){o3.status='closed';o3.close=Date.now();}else{D.rounds=D.rounds.filter(function(x){return x!==o3;});D.votes=D.votes.filter(function(v){return v.round!==o3.id;});}ls('aifleet_db',D);r={ok:true};}}
  else if(a==='bonus'){D.bonus.push({id:'b'+Date.now()+Math.floor(Math.random()*1e3),ts:Date.now(),name:String(d.who||''),pts:+d.pts||100,reason:d.reason||''});ls('aifleet_db',D);r={ok:true};}
  else if(a==='bonus_undo'){D.bonus=D.bonus.filter(function(b){return b.id!==d.id;});ls('aifleet_db',D);r={ok:true};}
@@ -4416,12 +4423,34 @@ document.head.appendChild(el('style',null,`
 #vpill{position:fixed;left:50%;bottom:1.1rem;z-index:46;transform:translate(-50%,160%);display:flex;align-items:center;gap:.6rem;padding:.65rem 1.1rem;border-radius:99px;border:1px solid var(--c2);background:rgba(20,18,6,.78);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);color:#fff;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 0 40px -10px var(--c2);transition:transform .5s cubic-bezier(.22,1,.36,1)}
 #vpill.on{transform:translate(-50%,0)}#vpill:active{transform:translate(-50%,0) scale(.97)}#vpill i{width:.55rem;height:.55rem;border-radius:50%;background:var(--c2);box-shadow:0 0 10px var(--c2);animation:vpb 1.4s ease-in-out infinite}@keyframes vpb{50%{opacity:.25}}
 .vbox h2{margin:.2rem 0 .3rem}.vcount{display:inline-flex;align-items:center;gap:.4rem;margin:.4rem 0 .8rem;padding:.3rem .8rem;border-radius:99px;background:rgba(255,212,0,.12);border:1px solid rgba(255,212,0,.5);font-size:.86rem;font-weight:800}.vcount b{font-size:1.1rem;color:var(--c2)}
-.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:.7rem;max-height:56svh;overflow:auto;padding:.15rem}
-.vcard{position:relative;border:1px solid var(--line);border-radius:1.1rem;padding:.85rem .9rem .8rem;background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:.3rem;transition:border-color .25s,background .25s,transform .15s ease-out}
-.vcard b{font-size:1rem;line-height:1.3}.vcard small{color:var(--mut);font-size:.76rem;font-weight:800}.vcard p{margin:0;font-size:.84rem;color:#d5daf2;line-height:1.55}.vcard a{font-size:.8rem;color:#9fc0ff;word-break:break-all}
-.vcard.sel{border-color:var(--c2);background:rgba(255,212,0,.1);box-shadow:0 0 0 1px var(--c2) inset}.vcard.me{opacity:.55}
-.vheart{margin-top:auto;align-self:flex-start;display:flex;align-items:center;gap:.35rem;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;border-radius:99px;padding:.4rem .8rem;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;transition:transform .12s ease-out,background .2s,border-color .2s}
-.vheart:active{transform:scale(.94)}.vheart svg{width:1rem;height:1rem}.vcard.sel .vheart{background:var(--c2);border-color:var(--c2);color:#1a1400}.vheart:disabled{cursor:default;opacity:.7}
+.vtop{display:flex;align-items:flex-start;gap:.8rem}.vtop>div:first-child{flex:1;min-width:0}
+.vclock{font-size:2rem;font-weight:900;font-variant-numeric:tabular-nums;color:var(--c2);line-height:1;padding-top:.2rem}.vclock.low{color:#ff5a7a}
+.vdots{display:flex;align-items:center;gap:.35rem;margin:.5rem 0 .7rem;font-size:.9rem;font-weight:700;color:#d5daf2}.vdots i{width:.7rem;height:.7rem;border-radius:50%;border:2px solid var(--c2);flex:none}.vdots i.on{background:var(--c2)}.vdots span{margin-left:.35rem}.vdots b{color:var(--c2)}
+.vlist{display:flex;flex-direction:column;gap:.45rem;max-height:58svh;overflow:auto;overscroll-behavior:contain;padding:.1rem;-webkit-overflow-scrolling:touch}
+.vrow{display:flex;align-items:center;gap:.75rem;min-height:3.6rem;padding:.55rem .7rem .55rem .6rem;border-radius:1rem;border:1px solid var(--line);background:rgba(255,255,255,.04);cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:background .18s,border-color .18s,transform .12s ease-out}
+.vrow:active{transform:scale(.98)}.vrow:focus-visible{outline:2px solid var(--c2);outline-offset:2px}
+.vrow .vh{width:2.4rem;height:2.4rem;border-radius:50%;display:grid;place-items:center;flex:none;border:1.5px solid rgba(255,255,255,.25);color:#fff;transition:background .18s,border-color .18s,color .18s}.vrow .vh svg{width:1.15rem;height:1.15rem}
+.vrow.sel{border-color:var(--c2);background:rgba(255,212,0,.1)}.vrow.sel .vh{background:var(--c2);border-color:var(--c2);color:#1a1400}
+.vrow.me{opacity:.45;cursor:default}.vrow.me .vh{border-style:dashed}
+.vtx{flex:1;min-width:0}.vtx b{display:block;font-size:1rem;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vtx small{display:block;font-size:.78rem;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.1rem}
+.vlink{flex:none;display:grid;place-items:center;min-width:2.6rem;min-height:2.6rem;font-size:.82rem;font-weight:800;color:#9fc0ff;border:1px solid rgba(159,192,255,.4);border-radius:99px;padding:0 .7rem;text-decoration:none}
+body.voteonly #foot,body.voteonly #modeTag{display:none!important}
+.vrow.shake{animation:vshake .32s}@keyframes vshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.vsave{min-height:1.3rem;margin:.6rem 0 .2rem;font-size:.86rem;font-weight:700;color:#9be7b0;text-align:center}.vsave.bad{color:#ff8fa3}
+.vdone{width:100%;min-height:3rem;font-size:1.05rem}
+#vote.modal{background:rgba(3,4,11,.62);backdrop-filter:none;-webkit-backdrop-filter:none}
+#vote .vbox{position:relative;will-change:transform}#vote .vbox.out{animation:none;transition:transform .26s cubic-bezier(.4,0,1,1),opacity .22s ease-in;transform:scale(.97);opacity:0}
+.vgrab{display:none}
+@media (max-width:640px){#vote.modal{place-items:end center;padding:0;overflow:hidden}
+ #vote .vbox{width:100%;max-width:none;border-radius:1.6rem 1.6rem 0 0;border-bottom:0;padding:.4rem 1.1rem calc(1rem + env(safe-area-inset-bottom,0px));animation:vsheet .46s cubic-bezier(.32,.72,0,1);touch-action:pan-y}
+ #vote .vbox.out{transform:translateY(105%);opacity:1}
+ .vgrab{display:block;width:2.6rem;height:.32rem;border-radius:99px;background:rgba(255,255,255,.35);margin:.35rem auto .7rem;touch-action:none}
+ .vtop{touch-action:none}}
+@keyframes vsheet{from{transform:translateY(100%)}}
+@media (prefers-reduced-transparency:reduce){#vote .vbox{background:#12152c!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+#vwait{display:none;position:fixed;inset:0;z-index:20;place-items:center;padding:5rem 1.2rem 2rem}#vwait.on{display:grid}
+.vwc{width:min(26rem,100%);text-align:center;padding:2rem 1.4rem;border-radius:1.6rem;border:1px solid var(--line);background:rgba(20,26,58,.7)}.vwc small{color:var(--c2);font-weight:900;letter-spacing:.2em}.vwc h2{font-size:1.9rem;margin:.5rem 0}.vwc p{color:#c9d0ee;line-height:1.7;margin:0 0 1.2rem}.vwc .btn{width:100%;min-height:3rem}
+.vpulse{display:inline-flex;align-items:center;gap:.5rem;font-weight:800;color:#c9d0ee}.vpulse i{width:.7rem;height:.7rem;border-radius:50%;background:var(--c2);animation:vpb 1.4s ease-in-out infinite}.vback{display:block;margin-top:1.4rem;font-size:.85rem;color:#8a92b8}
 .vempty{padding:1.2rem;border:1px dashed var(--line);border-radius:1rem;color:var(--mut);text-align:center}
 /* 投影：課堂積分王 */
 #arena{position:fixed;inset:0;z-index:85;overflow:auto;background:radial-gradient(1200px 600px at 20% -10%,#1b2556 0,transparent 60%),radial-gradient(900px 500px at 110% 10%,#3a2a05 0,transparent 55%),#060816;color:#eef1ff;padding:clamp(1rem,2.5vw,2.4rem)}
@@ -4467,47 +4496,94 @@ document.head.appendChild(el('style',null,`
 .adrow{display:grid;grid-template-columns:2.2rem minmax(5rem,9rem) 4.5rem minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.5rem 0;border-top:1px solid var(--line);font-size:.86rem}.adrow:first-of-type{border-top:0}.adrow .t{font-weight:900;color:#ffd400;font-size:1rem;text-align:right}.adrow .w a{color:#9fc0ff;margin-right:.6rem;white-space:nowrap}.adrow .w span{color:var(--mut);margin-right:.5rem}
 .adlog{display:flex;justify-content:space-between;gap:.6rem;align-items:center;font-size:.84rem;padding:.35rem 0;border-top:1px solid var(--line)}.adlog:first-of-type{border-top:0}
 @media (max-width:900px){.arbody{grid-template-columns:1fr}.arqr{position:relative}.arrest{grid-template-columns:1fr}.arpres{grid-template-columns:1fr}.adrow{grid-template-columns:2rem 1fr 4rem auto}.adrow .w{grid-column:2/-1}}
-@media (prefers-reduced-motion:reduce){#arena *,.arov{animation:none!important;transition:none!important}.arpod>div{opacity:1;transform:none}}
+.arrow{padding:.7rem 1.1rem;border-radius:1.2rem}.arrow .sc{font-size:2.3rem}.arrow.big .sc{font-size:2.8rem}.arrow.big .nm b{font-size:1.6rem}.arrow .nm b{font-size:1.3rem}.arrow .rk{font-size:1.5rem}
+.arrest{grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))}.arrest .arrow{padding:.5rem .8rem}.arrest .arrow .sc{font-size:1.6rem}.arrest .arrow .nm b{font-size:1.05rem}.arrest .arrow .tags{display:none}
+.arrow .plus{display:none}#arena.give .arrow .plus{display:inline-block;opacity:1;font-size:1rem;padding:.45rem .9rem;border-color:#ffd400;color:#ffd400}
+#arNext{font-size:1.05rem;padding:.7rem 1.3rem;background:#ffd400;color:#1a1400}#arNext kbd{opacity:.8}
+#arGive[aria-pressed=true]{background:#ffd400;color:#1a1400;border-color:#ffd400}
+#arBanner .arclock{margin-left:auto;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;font-variant-numeric:tabular-nums;color:#ffd400;line-height:1}#arBanner .arclock.low{color:#ff5a7a}#arBanner .btn,#arBanner .chip{flex:none}
+.arkbd .nx{color:#fff;font-weight:900}
+@media (prefers-reduced-motion:reduce){#vote .vbox{animation:none!important;transition:opacity .2s!important}#vote .vbox.out{transform:none!important;opacity:0}.vrow.shake{animation:none}.vrow,.vrow .vh{transition:none}#arena *,.arov{animation:none!important;transition:none!important}.arpod>div{opacity:1;transform:none}}
 `));
 
 /* =================== 學生：投票 =================== */
-var VS={round:null,data:null,sel:[],seen:{},timer:0};
+var VS={round:null,data:null,sel:[],seen:{},timer:0,endAt:0,saveT:0,saving:false,dirty:false,sentRound:null,err:''};
 var pill=el('button',null,'<i></i><span></span>');pill.id='vpill';pill.type='button';document.body.appendChild(pill);
 pill.onclick=function(){openVote();};
-var vm=el('div','modal','<div class="mbox wide vbox"><div class="kick" id="vk"></div><h2 id="vh"></h2><p class="cap" id="vp"></p><div class="vcount" id="vc"></div><div class="vgrid" id="vg"></div><p class="err" id="ve"></p><div class="row"><button class="btn" id="vgo">送出</button><button class="chip" id="vx">先關掉</button></div></div>');
+var vm=el('div','modal','<div class="mbox wide vbox"><div class="vgrab" aria-hidden="true"></div><div class="vtop"><div><div class="kick" id="vk"></div><h2 id="vh"></h2></div><div class="vclock" id="vclock" aria-live="off"></div></div><div class="vdots" id="vc"></div><div class="vlist" id="vg"></div><p class="vsave" id="ve" aria-live="polite"></p><button class="btn vdone" id="vgo" type="button">完成</button></div>');
 vm.id='vote';vm.hidden=true;document.body.appendChild(vm);
+/* 只用投票連結進來時：畫面只留一張等待卡 */
+var vw=el('div',null,'');vw.id='vwait';document.body.appendChild(vw);
 function me(){return A.me()||{};}
 function isT(){return !!((A.who()&&A.who().teacher)||me().tcode);}
-function heart(on){return '<svg viewBox="0 0 24 24" fill="'+(on?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.4-9.3-8.6C1.3 8.6 2.9 5 6.3 5c2 0 3.2 1.1 3.7 2.1.5-1 1.7-2.1 3.7-2.1 3.4 0 5 3.6 3.6 6.4C19 15.6 12 20 12 20z"/></svg>';}
-function setPill(){var r=VS.round,show=!!(r&&me().name&&!isT()&&vm.hidden&&!document.body.dataset.modal);pill.classList.toggle('on',show);if(r)pill.querySelector('span').textContent=rLabel(r)+'投票中 ・ '+(VS.data&&VS.data.mine&&VS.data.mine.length?'已投，可以改':'去投票');}
+function heart(on){return '<svg viewBox="0 0 24 24" fill="'+(on?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.2"><path d="M12 20s-7-4.4-9.3-8.6C1.3 8.6 2.9 5 6.3 5c2 0 3.2 1.1 3.7 2.1.5-1 1.7-2.1 3.7-2.1 3.4 0 5 3.6 3.6 6.4C19 15.6 12 20 12 20z"/></svg>';}
+function per(){return (VS.data&&VS.data.per)||3;}
+function leftSec(){return VS.endAt?Math.max(0,Math.ceil((VS.endAt-Date.now())/1000)):null;}
+function mmss(s){return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
+function setPill(){var r=VS.round,show=!!(r&&me().name&&!isT()&&vm.hidden&&!document.body.dataset.modal&&!document.body.classList.contains('voteonly'));pill.classList.toggle('on',show);
+ if(r){var n=VS.sel.length,l=leftSec();pill.querySelector('span').textContent=rLabel(r)+'投票中'+(l!=null?' ・ '+mmss(l):'')+' ・ '+(n?'已投 '+n+' 票':'去投票');}}
+function paintWait(){var on=document.body.classList.contains('voteonly')&&!isT();vw.className=on?'on':'';if(!on)return;var S=me(),r=VS.round;
+ if(!S.name){vw.innerHTML='';return;}
+ if(r)vw.innerHTML='<div class="vwc"><small>'+esc(S.name)+'</small><h2>'+rLabel(r)+'投票中</h2><p>'+(VS.sel.length?'你已經投了 '+VS.sel.length+' 票，結束前都可以改。':'選你最喜歡的，點一下就投好了。')+'</p><button class="btn" id="vwgo" type="button">'+(VS.sel.length?'看我投了誰':'開始投票')+'</button></div>';
+ else vw.innerHTML='<div class="vwc"><small>'+esc(S.name)+'</small><h2>等老師開始投票</h2><p>投票開始時，這裡會自動跳出來。<br>手機不用關，放著就好。</p><div class="vpulse"><i></i>等待中</div><a class="vback" href="'+esc(location.href.split('?')[0])+'">回課程網站</a></div>';}
+vw.addEventListener('click',function(e){if(e.target.closest('#vwgo'))openVote();});
 function poll(){clearTimeout(VS.timer);var S=me();
- if(!S.name||isT()||document.hidden){VS.timer=setTimeout(poll,6000);return;}
- api('vote_state',{},function(r){if(r&&r.ok){var was=VS.round&&VS.round.id;VS.data=r;VS.round=r.round||null;
-   if(VS.round&&!VS.seen[VS.round.id]&&!document.body.dataset.modal){VS.seen[VS.round.id]=1;openVote();}
-   else if(VS.round&&WANT_VOTE&&!was&&vm.hidden&&!document.body.dataset.modal){openVote();}
-   if(!VS.round&&!vm.hidden){A.modal('vote',false);C.toast('這一輪投票結束了，看大螢幕公布結果');}
-   if(WANT_VOTE&&!VS.round&&!VS.waitShown&&!document.body.dataset.modal){VS.waitShown=1;C.toast('老師還沒開始投票，開始後投票畫面會自動跳出來');}
-   setPill();}
-  VS.timer=setTimeout(poll,VS.round?(A.local?3000:8000):(A.local?4000:6000));});}
+ if(!S.name||isT()||document.hidden){VS.timer=setTimeout(poll,3000);paintWait();return;}
+ api('vote_ping',{},function(p){
+  if(p&&p.ok){var rid=p.rid||null;
+   if(rid&&p.left!=null)VS.endAt=Date.now()+p.left*1000;
+   if(rid&&(!VS.round||VS.round.id!==rid))setTimeout(function(){fetchState(true);},A.local?0:Math.random()*1200);
+   else if(!rid&&VS.round){var was=!vm.hidden;VS.round=null;VS.data=null;VS.endAt=0;if(was)closeVote();C.toast('投票結束了，看大螢幕公布結果');}
+   setPill();paintWait();}
+  VS.timer=setTimeout(poll,A.local?2000:(VS.round?5000:3000));});}
+function fetchState(auto,cb){api('vote_state',{},function(r){if(!r||!r.ok)return cb&&cb(false);if(!r.round){VS.round=null;setPill();paintWait();return cb&&cb(false);}
+  var same=VS.round&&VS.round.id===r.round.id;VS.data=r;VS.round=r.round;if(r.left!=null)VS.endAt=Date.now()+r.left*1000;
+  if(!(same||VS.sentRound===r.round.id))VS.sel=(r.mine||[]).slice();
+  if(auto&&!VS.seen[r.round.id]&&!document.body.dataset.modal){VS.seen[r.round.id]=1;openVote();C.beep(784,.12,'triangle');if(navigator.vibrate)try{navigator.vibrate(60);}catch(e){}}
+  else if(!vm.hidden)paintVote();setPill();paintWait();cb&&cb(true);});}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)poll();});
-function openVote(){var d=VS.data;if(!d||!d.round)return;VS.sel=(d.mine||[]).slice();A.modal('vote',true);paintVote();setPill();}
-function paintVote(){var d=VS.data,r=d.round,per=d.per||3,S=me(),h='';
- var ppl=r.mode&&r.mode!=='work';$('#vk').textContent='第 '+r.no+' 輪投票';$('#vh').textContent=ppl?'現場投票｜投給你覺得最棒的同學':stName(r.station)+'｜'+ST[r.station].n;
- $('#vp').textContent=ppl?'選 '+per+' 位同學，不能投自己。投票結束前都可以回來改。':'選 '+per+' 件你最喜歡的作品，不能投自己。投票結束前都可以回來改。';$('#ve').textContent='';
- if(!d.eligible){$('#vc').style.display='none';$('#vg').innerHTML='<div class="vempty">交過作品或填過課前問卷，才能投票。先去交這一站的作品吧。</div>';$('#vgo').hidden=true;return;}
- $('#vgo').hidden=false;$('#vc').style.display='';
- var left=per-VS.sel.length;$('#vc').innerHTML='還剩 <b>'+left+'</b> 票';
+/* 收起來：手機往下滑走、電腦淡出，跟進來的路一樣 */
+function closeVote(cb){var bx=vm.querySelector('.vbox');if(vm.hidden){cb&&cb();return;}bx.style.transition='';bx.style.transform='';bx.classList.add('out');
+ setTimeout(function(){bx.classList.remove('out');A.modal('vote',false);setPill();paintWait();cb&&cb();},matchMedia('(prefers-reduced-motion: reduce)').matches?200:270);}
+/* 手機：抓住上緣往下拖就收起來，放手看速度決定收還是彈回 */
+(function(){var bx=vm.querySelector('.vbox'),y0=0,dy=0,on=false,hist=[];
+ function start(e){if(!matchMedia('(max-width:640px)').matches||e.target.closest('button,a'))return;on=true;y0=e.clientY;dy=0;hist=[[e.timeStamp,e.clientY]];bx.style.transition='none';try{e.target.setPointerCapture(e.pointerId);}catch(x){}}
+ function move(e){if(!on)return;dy=e.clientY-y0;hist.push([e.timeStamp,e.clientY]);if(hist.length>5)hist.shift();var d=dy>=0?dy:-(Math.abs(dy)*.55*120/(120+.55*Math.abs(dy)));bx.style.transform='translateY('+d.toFixed(1)+'px)';}
+ function end(){if(!on)return;on=false;var a=hist[0],b=hist[hist.length-1],v=b&&a&&b[0]>a[0]?(b[1]-a[1])/(b[0]-a[0]):0,proj=dy+v*180;
+  if(dy>0&&(proj>bx.offsetHeight*.3||v>.6)){bx.style.transition='transform .26s cubic-bezier(.2,.8,.4,1)';bx.style.transform='translateY(105%)';var go=function(){A.modal('vote',false);bx.style.transition='';bx.style.transform='';setPill();paintWait();if(!VS.err&&VS.sel.length)C.toast('投好了 '+VS.sel.length+' 票，結束前都可以回來改');};setTimeout(function(){if(VS.dirty)save(go);else go();},260);}
+  else{bx.style.transition='transform .42s cubic-bezier(.32,.72,0,1)';bx.style.transform='';}}
+ [vm.querySelector('.vgrab'),vm.querySelector('.vtop')].forEach(function(h){h.addEventListener('pointerdown',start);h.addEventListener('pointermove',move);h.addEventListener('pointerup',end);h.addEventListener('pointercancel',end);});})();
+vm.addEventListener('click',function(e){if(e.target===vm)$('#vgo').click();});
+function openVote(){if(!VS.data||!VS.data.round){fetchState(false,function(ok){if(ok)openVote();});return;}A.modal('vote',true);VS.err='';paintVote();setPill();}
+function paintVote(){var d=VS.data,r=d.round,n=per(),S=me(),h='',ppl=r.mode&&r.mode!=='work';
+ $('#vk').textContent='第 '+r.no+' 輪投票';$('#vh').textContent=ppl?'投給最棒的同學':stName(r.station)+'｜'+ST[r.station].n;
  if(!d.cands.length)h='<div class="vempty">'+(ppl?'還沒有可以投的同學。':'這一站還沒有人交作品。')+'</div>';
  d.cands.forEach(function(w){var mine=w.name===S.name,on=VS.sel.indexOf(w.id)>=0,u=safeUrl(w.link)||safeUrl(w.fileUrl);
-  h+='<div class="vcard'+(on?' sel':'')+(mine?' me':'')+'" data-w="'+esc(w.id)+'">'+(ppl?'<b style="font-size:1.15rem">'+esc(w.name)+'</b>':'<small>'+esc(w.name)+'</small><b>'+esc(w.title)+'</b>')+(w.note?'<p>'+esc(w.note)+'</p>':'')+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">看作品 ↗</a>':'')+
-   '<button class="vheart" type="button"'+(mine?' disabled':'')+' aria-pressed="'+on+'">'+heart(on)+(mine?(ppl?'你自己':'你的作品'):on?'已投':'投他一票')+'</button></div>';});
- $('#vg').innerHTML=h;$('#vgo').textContent=VS.sel.length?'送出我的 '+VS.sel.length+' 票':'選好再送出';$('#vgo').disabled=!VS.sel.length;}
-$('#vg').addEventListener('click',function(e){var b=e.target.closest('.vheart');if(!b||b.disabled)return;var id=b.closest('.vcard').dataset.w,i=VS.sel.indexOf(id),per=VS.data.per||3;
- if(i>=0)VS.sel.splice(i,1);else{if(VS.sel.length>=per){$('#ve').textContent='每人 '+per+' 票，先取消一票再選這件。';return;}VS.sel.push(id);C.beep(740,.06,'sine',.03);}paintVote();});
-$('#vgo').onclick=function(){var b=this,old=(VS.data.mine||[]).slice(),sel=VS.sel.slice();$('#ve').textContent='';VS.data.mine=sel;A.modal('vote',false);C.toast('已送出 '+sel.length+' 票，結束前都可以改');C.beep(880,.12);C.burst(innerWidth/2,innerHeight*.6,'#FFD400');setPill();
- api('vote',{round:VS.data.round.id,works:sel},function(r){if(r&&r.ok)return;VS.data.mine=old;VS.sel=sel;if(VS.round){A.modal('vote',true);paintVote();$('#ve').textContent=((r&&r.msg)||'剛剛沒有送成功')+'，請再按一次送出';}else C.toast((r&&r.msg)||'這一輪投票已經結束了');setPill();});};
-$('#vx').onclick=function(){A.modal('vote',false);setPill();};
-setTimeout(poll,1500);setInterval(setPill,1500);
+  h+='<div class="vrow'+(on?' sel':'')+(mine?' me':'')+'" data-w="'+esc(w.id)+'" role="button" tabindex="'+(mine?-1:0)+'" aria-pressed="'+on+'"'+(mine?' aria-disabled="true"':'')+'>'+
+   '<span class="vh">'+heart(on)+'</span><span class="vtx"><b>'+esc(ppl?w.name:w.title)+'</b><small>'+(mine?(ppl?'你自己':'你的作品，不能投'):ppl?'':esc(w.name)+(w.note?'・'+esc(w.note):''))+'</small></span>'+
+   (u&&!mine?'<a class="vlink" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" aria-label="看作品">看</a>':'')+'</div>';});
+ $('#vg').innerHTML=h;paintDots();paintSave();tickVote();}
+function paintDots(){var n=per(),used=VS.sel.length,dots='';for(var i=0;i<n;i++)dots+='<i class="'+(i<used?'on':'')+'"></i>';
+ $('#vc').innerHTML=dots+'<span>'+(used>=n?'票都投完了，要換就先點掉一個':'點一下就投，還可以投 <b>'+(n-used)+'</b> 票')+'</span>';}
+function refreshRows(){[].forEach.call($('#vg').querySelectorAll('.vrow'),function(r){if(r.classList.contains('me'))return;var on=VS.sel.indexOf(r.dataset.w)>=0;if(r.classList.contains('sel')!==on){r.classList.toggle('sel',on);r.setAttribute('aria-pressed',on);r.querySelector('.vh').innerHTML=heart(on);}});paintDots();}
+function paintSave(){var e=$('#ve');e.className='vsave'+(VS.err?' bad':'');e.textContent=VS.err?VS.err:VS.saving||VS.dirty?'儲存中…':VS.sentRound===(VS.round&&VS.round.id)?'已存好 ✓　結束前都可以改':'';}
+function tickVote(){var l=leftSec(),c=$('#vclock');if(c){c.textContent=l!=null?mmss(l):'';c.classList.toggle('low',l!=null&&l<=10);}}
+setInterval(function(){if(!vm.hidden)tickVote();if(VS.round)setPill();},500);
+function toggle(row){var id=row.dataset.w,i=VS.sel.indexOf(id),n=per();
+ if(i>=0)VS.sel.splice(i,1);
+ else{if(VS.sel.length>=n){VS.err='最多 '+n+' 票，先點掉一個再選這個';paintSave();row.classList.remove('shake');void row.offsetWidth;row.classList.add('shake');if(navigator.vibrate)try{navigator.vibrate([30,40,30]);}catch(e){}return;}
+  VS.sel.push(id);C.beep(740,.06,'sine',.03);if(navigator.vibrate)try{navigator.vibrate(12);}catch(e){}}
+ VS.err='';VS.dirty=true;refreshRows();paintSave();clearTimeout(VS.saveT);VS.saveT=setTimeout(save,600);}
+function save(cb){clearTimeout(VS.saveT);if(!VS.round){cb&&cb();return;}if(VS.saving){VS.again=true;cb&&cb();return;}
+ VS.dirty=false;VS.saving=true;paintSave();var rid=VS.round.id,sel=VS.sel.slice();
+ api('vote',{round:rid,works:sel},function(r){VS.saving=false;
+  if(r&&r.ok){VS.sentRound=rid;VS.err='';if(VS.data)VS.data.mine=sel;}
+  else VS.err=((r&&r.msg)||'網路不穩，沒存到')+(r&&/結束/.test(r.msg||'')?'':'，再點一次');
+  if(VS.again){VS.again=false;save();}else{paintSave();setPill();paintWait();}cb&&cb();});}
+$('#vg').addEventListener('click',function(e){if(e.target.closest('.vlink'))return;var row=e.target.closest('.vrow');if(!row||row.classList.contains('me'))return;toggle(row);});
+$('#vg').addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;var row=e.target.closest('.vrow');if(!row||row.classList.contains('me'))return;e.preventDefault();toggle(row);});
+$('#vgo').onclick=function(){var done=function(){closeVote();if(!VS.err&&VS.sel.length)C.toast('投好了 '+VS.sel.length+' 票，結束前都可以回來改');};if(VS.dirty)save(done);else done();};
+setTimeout(poll,800);setInterval(setPill,1500);setTimeout(paintWait,300);
 
 /* =================== 老師：資料 =================== */
 var B=null,view='total',station=0,stationTouched=false,arTimer=0,prevScore={};
@@ -4527,9 +4603,9 @@ function addBonus(name,reason){act('bonus',{who:name,pts:100,reason:reason||'老
 
 /* =================== 老師：投影畫面 =================== */
 var ar=el('div',null,'<header class="arh"><div><small>CLASSROOM ARENA ・ LIVE</small><h1>課堂積分王</h1></div><div class="sp"></div><span class="archip" id="arMeta"></span><div class="arseg" role="group" aria-label="排行"><button data-view="stage">本階段</button><button data-view="total">總分</button></div><button class="chip" id="arX">關閉</button></header>'+
- '<div class="arctl"><div class="arst" id="arSt"></div><button class="btn ghost" id="arPres">發表模式<kbd>P</kbd></button><button class="btn gold" id="arOpen">投這一站的作品<kbd>V</kbd></button><button class="btn ghost" id="arLive">現場投票<kbd>L</kbd></button><button class="btn" id="arClose" hidden>結束投票<kbd>E</kbd></button><button class="chip" id="arCancel" hidden>取消這一輪</button><button class="btn ghost" id="arPod">頒獎<kbd>A</kbd></button><span id="arStatus"></span></div>'+
- '<div id="arBanner"><i></i><b id="arBt"></b><span id="arBs"></span></div>'+
- '<div class="arbody"><div><p class="arsec" id="arSec"></p><div id="arList"></div><p class="arkbd">鍵盤：<kbd>1</kbd>～<kbd>5</kbd> 選站　<kbd>P</kbd> 發表模式　<kbd>V</kbd> 投這一站的作品　<kbd>L</kbd> 現場投票（投人）　<kbd>E</kbd> 結束投票　<kbd>B</kbd> 本階段／總分　<kbd>A</kbd> 頒獎　<kbd>Q</kbd> 放大 QR　<kbd>Esc</kbd> 關閉</p></div>'+
+ '<div class="arctl"><div class="arst" id="arSt"></div><button class="btn" id="arNext"></button><button class="btn ghost" id="arLive">現場投票<kbd>L</kbd></button><button class="btn ghost" id="arPod">頒獎<kbd>A</kbd></button><button class="chip" id="arGive" aria-pressed="false">加分<kbd>G</kbd></button><span id="arStatus"></span></div>'+
+ '<div id="arBanner"><i></i><div><b id="arBt"></b><br><span id="arBs"></span></div><span class="arclock" id="arClock"></span><button class="chip" id="arMore">＋30 秒<kbd>+</kbd></button><button class="btn" id="arClose">結束投票<kbd>E</kbd></button><button class="chip" id="arCancel">取消這一輪</button></div>'+
+ '<div class="arbody"><div><p class="arsec" id="arSec"></p><div id="arList"></div><p class="arkbd"><kbd>空白鍵</kbd> <span class="nx" id="arNextK"></span>　　<kbd>1</kbd>～<kbd>5</kbd> 換站　<kbd>L</kbd> 現場投票　<kbd>G</kbd> 加分　<kbd>A</kbd> 頒獎　<kbd>B</kbd> 本階段／總分　<kbd>Esc</kbd> 關閉</p></div>'+
  '<aside class="arqr"><h3>掃碼投票</h3><div class="qb" id="arQr"></div><p id="arUrl"></p><button class="chip" id="arQrBig">放大 QR code<kbd>Q</kbd></button></aside></div>');
 ar.id='arena';ar.hidden=true;document.body.appendChild(ar);
 var ovChamp=el('div','arov',''),ovPres=el('div','arov',''),ovPod=el('div','arov',''),ovQr=el('div','arov',''),ovPick=el('div','arov','');[ovChamp,ovPres,ovPod,ovQr,ovPick].forEach(function(o){o.hidden=true;ar.appendChild(o);});
@@ -4540,10 +4616,23 @@ function paintArena(){if(!B||ar.hidden)return;var n=B.participants,rc=B.rounds.f
  $('#arMeta').textContent=n+' 人參賽 ・ '+rc+' 輪投票';
  [].forEach.call(ar.querySelectorAll('[data-view]'),function(b){b.setAttribute('aria-pressed',b.dataset.view===view);});
  var h='';ST.forEach(function(s,i){h+='<button data-st="'+i+'" style="--k:'+s.k+'" aria-pressed="'+(i===station)+'"'+(B.open?' disabled':'')+'>'+stName(i)+'</button>';});$('#arSt').innerHTML=h;
- var o=B.open;$('#arOpen').hidden=!!o;$('#arLive').hidden=!!o;$('#arClose').hidden=!o;$('#arCancel').hidden=!o;
+ var o=B.open,nx=nextInfo();syncClock();$('#arNext').innerHTML=esc(nx.t)+'<kbd>空白鍵</kbd>';$('#arNextK').textContent='下一步：'+nx.t;$('#arNext').hidden=!!o;$('#arLive').hidden=!!o;$('#arGive').setAttribute('aria-pressed',ar.classList.contains('give'));if(!o)$('#arClock').textContent='';
  $('#arStatus').textContent=o?'':(cands(station).length+' 件作品可以被投');
- $('#arBanner').classList.toggle('on',!!o);if(o){var ppl=o.mode&&o.mode!=='work',cs=o.n!=null?o.n:cands(o.station).length;$('#arBt').textContent=rLabel(o)+'投票中';$('#arBs').textContent='已經有 '+o_voters(o)+' 人投票 ・ '+cs+(ppl?' 位同學可以被投':' 件作品')+' ・ 票數結束後公布';}
+ $('#arBanner').classList.toggle('on',!!o);if(o){var ppl=o.mode&&o.mode!=='work',cs=o.n!=null?o.n:cands(o.station).length;$('#arBt').textContent=rLabel(o)+'投票中';$('#arBs').textContent='已經有 '+o_voters(o)+' 人投票 ・ '+cs+(ppl?' 位同學可以被投':' 件作品')+' ・ 時間到自動公布';}
  paintList();}
+function nextInfo(){if(!B)return {t:'讀取中',f:null};
+ if(B.open)return {t:'結束投票，公布冠軍',f:endVote};
+ if(cands(station).length)return {t:'開始'+stName(station)+'發表（'+cands(station).length+' 位）',f:openPres};
+ return {t:'等學生交'+stName(station)+'作品',f:function(){C.toast(stName(station)+'還沒有人交作品；要投人就按 L 現場投票');}};}
+function nextStep(){if(!ovPres.hidden){if(P.i>=P.list.length-1){stopTimer();ovPres.hidden=true;startVote();}else presGo(1);return;}
+ if(!ovChamp.hidden||!ovPod.hidden||!ovQr.hidden){ovChamp.hidden=ovPod.hidden=ovQr.hidden=true;view='total';paintArena();return;}
+ if(!ovPick.hidden){liveStart('all');return;}var n=nextInfo();if(n.f)n.f();}
+/* 投票倒數：預設 60 秒，時間到自動結束 */
+var VT={end:0,closing:false};
+function syncClock(){if(B&&B.open&&B.open.left!=null&&B.open.id!=='_new'){var e=Date.now()+B.open.left*1000;if(!VT.end||Math.abs(e-VT.end)>2500)VT.end=e;}if(!B||!B.open){VT.end=0;VT.closing=false;}}
+setInterval(function(){if(ar.hidden||!B||!B.open||!VT.end)return;var l=Math.max(0,Math.ceil((VT.end-Date.now())/1000)),c=$('#arClock');if(c){c.textContent=Math.floor(l/60)+':'+('0'+l%60).slice(-2);c.classList.toggle('low',l<=10);}
+ if(l<=0&&!VT.closing&&B.open.id!=='_new'){VT.closing=true;endVote();}},250);
+function addTime(){if(!B||!B.open)return;VT.end=(VT.end||Date.now())+30000;act('round_time',{add:30},'多 30 秒');}
 function o_voters(o){var r=B.rounds.filter(function(x){return x.id===o.id;})[0];return r?r.voters:0;}
 function rows(){var lc=lastClosed();
  if(view==='stage'){if(!lc)return {sec:'還沒有投過票',list:[]};
@@ -4555,23 +4644,23 @@ function paintList(){var R=rows(),L=R.list,max=Math.max.apply(null,L.map(functio
  if(!L.length){box.innerHTML='<div class="arempty">'+(view==='stage'?'結束第一輪投票後，這裡會出現本階段的排名。':'學生交作品、填問卷後就會出現在這裡。')+'</div>';return;}
  var rank=0,last=null,h='<div class="artop">',i;
  for(i=0;i<L.length;i++){var p=L[i];if(p.total!==last){rank=i+1;last=p.total;}p.rank=rank;}
- function row(p,big){var md=p.rank<=3&&p.total>0?'<span class="md g'+p.rank+'">'+p.rank+'</span>':'<span class="rk">'+p.rank+'</span>',up=prevScore[view+p.name]!=null&&p.total>prevScore[view+p.name];prevScore[view+p.name]=p.total;
+ function row(p,big){var md=p.rank<=3&&p.total>0?'<span class="md g'+p.rank+'">'+p.rank+'</span>':'<span class="rk">'+(p.total>0?p.rank:'—')+'</span>',up=prevScore[view+p.name]!=null&&p.total>prevScore[view+p.name];prevScore[view+p.name]=p.total;
   return '<div class="arrow'+(big?' big':'')+(up?' up':'')+'" data-n="'+esc(p.name)+'"><span class="bar" style="width:'+(p.total/max*100).toFixed(1)+'%"></span>'+md+'<div class="nm"><b>'+esc(p.name)+'</b><div class="tags">'+p.tags.join('')+'</div></div><button class="plus" type="button" data-plus="'+esc(p.name)+'" title="臨時加分">+100</button><span class="sc">'+fmt(p.total)+'</span></div>';}
- L.slice(0,5).forEach(function(p){h+=row(p,true);});h+='</div><div class="arrest">';L.slice(5).forEach(function(p){h+=row(p,false);});h+='</div>';box.innerHTML=h;
+ L.slice(0,3).forEach(function(p){h+=row(p,true);});h+='</div><div class="arrest">';L.slice(3).forEach(function(p){h+=row(p,false);});h+='</div>';box.innerHTML=h;
  if(!RM)[].forEach.call(box.querySelectorAll('.arrow'),function(e){var b=before[e.dataset.n];if(!b)return;var a=e.getBoundingClientRect(),dx=b.left-a.left,dy=b.top-a.top;if(!dx&&!dy)return;e.style.transition='none';e.style.transform='translate('+dx+'px,'+dy+'px)';e.offsetWidth;e.style.transition='transform .7s cubic-bezier(.22,1,.36,1)';e.style.transform='';});}
 ar.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.dataset.view){view=t.dataset.view;paintArena();return;}
  if(t.dataset.st!=null){station=+t.dataset.st;stationTouched=true;paintArena();return;}
  if(t.dataset.plus){addBonus(t.dataset.plus,'老師加分');return;}
- if(t.id==='arX')close();else if(t.id==='arOpen')startVote();else if(t.id==='arLive')openPick();else if(t.id==='arClose')endVote();else if(t.id==='arPres')openPres();else if(t.id==='arPod')openPod();else if(t.id==='arQrBig')openQr();
+ if(t.id==='arX')close();else if(t.id==='arNext')nextStep();else if(t.id==='arGive'){ar.classList.toggle('give');paintArena();}else if(t.id==='arMore')addTime();else if(t.id==='arLive')openPick();else if(t.id==='arClose')endVote();else if(t.id==='arPres')openPres();else if(t.id==='arPod')openPod();else if(t.id==='arQrBig')openQr();
  else if(t.id==='arCancel'){if(t.dataset.arm){delete t.dataset.arm;act('round_cancel',{},'這一輪已取消，投的票都刪掉了',null,function(){B.open=null;});}else{t.dataset.arm=1;t.textContent='再按一次確定取消';setTimeout(function(){delete t.dataset.arm;t.textContent='取消這一輪';},2600);}}});
-function startVote(){if(!B||B.open)return;if(!cands(station).length){C.toast(stName(station)+'還沒有人交作品');return;}stationTouched=false;var st0=station;act('round_open',{station:station},stName(station)+'開始投票，學生手機會自動跳出來',null,function(){B.open={id:'_new',no:B.rounds.length+1,station:st0,mode:'work',n:cands(st0).length};});C.beep(523,.12,'triangle');setTimeout(function(){C.beep(784,.18,'triangle');},120);}
+function startVote(){if(!B||B.open)return;if(!cands(station).length){C.toast(stName(station)+'還沒有人交作品');return;}stationTouched=false;var st0=station;VT.end=Date.now()+60000;VT.closing=false;act('round_open',{station:station,dur:60},stName(station)+'開始投票，60 秒',null,function(){B.open={id:'_new',no:B.rounds.length+1,station:st0,mode:'work',n:cands(st0).length};});C.beep(523,.12,'triangle');setTimeout(function(){C.beep(784,.18,'triangle');},120);}
 /* 現場投票：不用交作品，直接投人。可以全班都能被投，或只投老師點名的幾位 */
 var PK={};
 function openPick(){if(!B||B.open)return;var ns=(B.names||[]).slice();if(ns.length<2){C.toast('名單上至少要有兩個人，才能現場投票');return;}PK={};paintPick();ovPick.hidden=false;}
 function paintPick(){var ns=(B.names||[]),n=Object.keys(PK).length;
  ovPick.innerHTML='<div class="arpick"><small>現場投票 ・ 不用交作品</small><h2>這一輪投給誰？</h2><div class="row" style="justify-content:center;margin:.2rem 0 1rem"><button class="btn gold" data-pk="all" style="background:#ffd400;color:#1a1400">全班 '+ns.length+' 位都可以被投<kbd>Enter</kbd></button></div><p>或是只投剛剛上台、發言的幾位，點名字勾起來：</p><div class="pkgrid">'+ns.map(function(x){return '<button data-pn="'+esc(x)+'" aria-pressed="'+(!!PK[x])+'">'+esc(x)+'</button>';}).join('')+'</div><div class="row" style="justify-content:center;margin-top:1rem"><button class="btn" data-pk="go"'+(n<2?' disabled':'')+'>'+(n<2?'至少點兩位':'只投這 '+n+' 位，開始')+'</button><button class="chip" data-pk="x">取消</button></div></div>';}
-function liveStart(mode){var d={station:station,mode:mode};if(mode==='pick')d.names=Object.keys(PK);ovPick.hidden=true;stationTouched=false;var n0=mode==='pick'?d.names.length:(B.names||[]).length,st0=station;act('round_open',d,'現場投票開始，學生手機會自動跳出來',null,function(){B.open={id:'_new',no:B.rounds.length+1,station:st0,mode:mode,n:n0};});C.beep(523,.12,'triangle');setTimeout(function(){C.beep(784,.18,'triangle');},120);}
+function liveStart(mode){var d={station:station,mode:mode,dur:60};VT.end=Date.now()+60000;VT.closing=false;if(mode==='pick')d.names=Object.keys(PK);ovPick.hidden=true;stationTouched=false;var n0=mode==='pick'?d.names.length:(B.names||[]).length,st0=station;act('round_open',d,'現場投票開始，60 秒',null,function(){B.open={id:'_new',no:B.rounds.length+1,station:st0,mode:mode,n:n0};});C.beep(523,.12,'triangle');setTimeout(function(){C.beep(784,.18,'triangle');},120);}
 ovPick.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.pn){if(PK[b.dataset.pn])delete PK[b.dataset.pn];else PK[b.dataset.pn]=1;paintPick();}else if(b.dataset.pk==='all')liveStart('all');else if(b.dataset.pk==='go')liveStart('pick');else if(b.dataset.pk==='x')ovPick.hidden=true;});
 function endVote(){if(!B||!B.open||B.open.id==='_new')return;var id=B.open.id;ovChamp.innerHTML='<div class="archamp"><small>投票結束</small><h2>計票中…</h2></div>';ovChamp.hidden=false;act('round_close',{},null,function(ok){if(!ok){ovChamp.hidden=true;return;}view='stage';paintArena();showChamp(id);},function(){B.open=null;});}
 function showChamp(id){var r=B.rounds.filter(function(x){return x.id===id;})[0];if(!r)return;var h='<div class="archamp"><small>'+rLabel(r)+(r.mode&&r.mode!=='work'?'投票':'')+'冠軍 ・ 第 '+r.no+' 輪</small>';
@@ -4591,18 +4680,18 @@ function preview(w){var fu=safeUrl(w.fileUrl),u=safeUrl(w.link);
 function showPres(){var w=P.list[P.i];if(!w)return;var R=2*Math.PI*42;
  ovPres.innerHTML='<div class="arpres"><div class="pv">'+preview(w)+'</div><div><small>'+stName(station)+' ・ 發表 '+(P.i+1)+' / '+P.list.length+'</small><h2>'+esc(w.name)+'</h2><h3>'+esc(w.title)+'</h3>'+(w.note?'<p>'+esc(w.note)+'</p>':'')+
  '<div class="artimer" id="arT"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,.12)"/><circle id="arTr" cx="50" cy="50" r="42" stroke="#ffd400" stroke-linecap="round" stroke-dasharray="'+R+'" stroke-dashoffset="0"/></svg><div><div class="tt" id="arTt"></div><div class="row" style="margin:.4rem 0 0"><button class="chip" data-p="m">－</button><button class="chip" data-p="t" id="arTp">暫停</button><button class="chip" data-p="p">＋</button></div></div></div>'+
- '<div class="row"><button class="btn ghost" data-p="prev">← 上一位</button><button class="btn" data-p="next">下一位 →</button><button class="chip" data-p="plus">'+esc(w.name)+' +100</button><button class="chip" data-p="x">離開</button></div><p class="arkbd"><kbd>→</kbd> 下一位　<kbd>←</kbd> 上一位　<kbd>T</kbd> 暫停計時　<kbd>+</kbd><kbd>-</kbd> 調整分鐘　<kbd>Esc</kbd> 離開</p></div></div>';
+ '<div class="row"><button class="btn ghost" data-p="prev">← 上一位</button><button class="btn" data-p="next">下一位 →</button><button class="chip" data-p="plus">'+esc(w.name)+' +100</button><button class="chip" data-p="x">離開</button></div><p class="arkbd"><kbd>空白鍵</kbd> '+(P.i>=P.list.length-1?'<span class="nx">發表完，開始投票</span>':'下一位')+'　<kbd>←</kbd> 上一位　<kbd>T</kbd> 暫停計時　<kbd>+</kbd><kbd>-</kbd> 調整分鐘　<kbd>Esc</kbd> 離開</p></div></div>';
  P.left=P.mins*60;startTimer();}
 function tick(){var R=2*Math.PI*42,tt=$('#arTt'),tr=$('#arTr');if(!tt)return;var l=Math.max(0,P.left);tt.textContent=Math.floor(l/60)+':'+('0'+Math.floor(l%60)).slice(-2);tr.setAttribute('stroke-dashoffset',(R*(1-l/(P.mins*60))).toFixed(1));$('#arT').classList.toggle('over',P.left<=0);$('#arTp').textContent=P.run?'暫停':'繼續';}
 function startTimer(){stopTimer();P.run=true;var last=performance.now();P.t=setInterval(function(){var n=performance.now();if(P.run){var was=P.left;P.left-=(n-last)/1000;if(was>0&&P.left<=0){C.beep(880,.25,'square',.05);setTimeout(function(){C.beep(660,.35,'square',.05);},280);}}last=n;tick();},200);tick();}
 function stopTimer(){clearInterval(P.t);P.run=false;}
-function presGo(d){var j=P.i+d;if(j<0||j>=P.list.length){if(j>=P.list.length)C.toast('全部發表完了，可以開始投票');return;}P.i=j;showPres();}
+function presGo(d){var j=P.i+d;if(j<0||j>=P.list.length){if(j>=P.list.length)C.toast('最後一位了，再按一次空白鍵就開始投票');return;}P.i=j;showPres();}
 ovPres.addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;var k=b.dataset.p;
  if(k==='next')presGo(1);else if(k==='prev')presGo(-1);else if(k==='t'){P.run=!P.run;tick();}else if(k==='m'){P.mins=Math.max(1,P.mins-1);P.left=Math.min(P.left,P.mins*60);tick();}else if(k==='p'){P.mins=Math.min(10,P.mins+1);P.left+=60;tick();}
  else if(k==='plus'){addBonus(P.list[P.i].name,'發表');b.disabled=true;b.textContent='已加 100';}else if(k==='x'){stopTimer();ovPres.hidden=true;}});
 
 function openPod(){var L=B.people.filter(function(p){return p.total>0;}).slice(0,3);if(!L.length){C.toast('還沒有人得分');return;}
- var o=[L[1],L[0],L[2]],cls=['p2','p1','p3'],num=[2,1,3],h='<div style="text-align:center;width:100%"><div class="archamp"><small>課程總冠軍</small></div><div class="arpod">';
+ var o=[L[1],L[0],L[2]],cls=['p2','p1','p3'],num=[2,1,3],done=[0,1,2,3,4].every(function(i){return B.rounds.some(function(r){return r.status==='closed'&&r.station===i&&(r.mode||'work')==='work';});}),h='<div style="text-align:center;width:100%"><div class="archamp"><small>'+(done?'課程總冠軍':'目前領先')+'</small></div><div class="arpod">';
  o.forEach(function(p,i){if(!p){h+='<div class="'+cls[i]+'"></div>';return;}h+='<div class="'+cls[i]+'"><b>'+esc(p.name)+'</b><em>'+fmt(p.total)+'</em><div class="blk">'+num[i]+'</div></div>';});
  h+='</div><div class="row" style="justify-content:center;margin-top:1.4rem"><button class="btn ghost" data-px="1">看全部排名</button></div></div>';ovPod.innerHTML=h;ovPod.hidden=false;view='total';paintArena();
  if(!RM)setTimeout(function(){C.burst(innerWidth/2,innerHeight*.3,'#FFD400');C.beep(784,.2,'triangle');setTimeout(function(){C.beep(1047,.4,'triangle');},200);},1200);}
@@ -4611,12 +4700,13 @@ function openQr(){ovQr.innerHTML='<div style="text-align:center"><div class="arq
 ovQr.addEventListener('click',function(e){if(e.target.closest('[data-qx]')||e.target===ovQr)ovQr.hidden=true;});
 
 addEventListener('keydown',function(e){if(ar.hidden||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||''))return;var k=e.key,used=true;
- if(!ovPres.hidden){if(k==='ArrowRight'||k===' ')presGo(1);else if(k==='ArrowLeft')presGo(-1);else if(k==='t'||k==='T'){P.run=!P.run;tick();}else if(k==='+'||k==='='){P.mins=Math.min(10,P.mins+1);P.left+=60;tick();}else if(k==='-'){P.mins=Math.max(1,P.mins-1);P.left=Math.min(P.left,P.mins*60);tick();}else if(k==='Escape'){stopTimer();ovPres.hidden=true;}else used=false;}
+ if(k===' '&&ovPick.hidden){nextStep();}
+ else if(!ovPres.hidden){if(k==='ArrowRight')presGo(1);else if(k==='ArrowLeft')presGo(-1);else if(k==='t'||k==='T'){P.run=!P.run;tick();}else if(k==='+'||k==='='){P.mins=Math.min(10,P.mins+1);P.left+=60;tick();}else if(k==='-'){P.mins=Math.max(1,P.mins-1);P.left=Math.min(P.left,P.mins*60);tick();}else if(k==='Escape'){stopTimer();ovPres.hidden=true;}else used=false;}
  else if(!ovPick.hidden){if(k==='Escape')ovPick.hidden=true;else if(k==='Enter')liveStart('all');else used=false;}
- else if(!ovChamp.hidden||!ovPod.hidden||!ovQr.hidden){if(k==='Escape'||k===' '||k==='Enter'){ovChamp.hidden=ovPod.hidden=ovQr.hidden=true;}else used=false;}
+ else if(!ovChamp.hidden||!ovPod.hidden||!ovQr.hidden){if(k==='Escape'||k==='Enter'){ovChamp.hidden=ovPod.hidden=ovQr.hidden=true;}else used=false;}
  else if(k>='1'&&k<='5'){if(!B||!B.open){station=+k-1;stationTouched=true;paintArena();}}
  else if(k==='p'||k==='P')openPres();else if(k==='v'||k==='V')startVote();else if(k==='l'||k==='L')openPick();else if(k==='e'||k==='E')endVote();else if(k==='b'||k==='B'){view=view==='total'?'stage':'total';paintArena();}
- else if(k==='a'||k==='A')openPod();else if(k==='q'||k==='Q')openQr();else if(k==='Escape')close();else used=false;
+ else if(k==='a'||k==='A')openPod();else if(k==='g'||k==='G'){ar.classList.toggle('give');paintArena();}else if((k==='+'||k==='=')&&B&&B.open)addTime();else if(k==='q'||k==='Q')openQr();else if(k==='Escape')close();else used=false;
  if(used){e.preventDefault();e.stopImmediatePropagation();}},true);
 
 /* =================== 老師：後台「排行與投票」分頁 =================== */
