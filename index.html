@@ -5031,5 +5031,179 @@ window.SVX={html:html,_lineText:lineText,_model:function(){return M();}};
 })();
 
 </script>
+<script>
+/* ===== 交流區（v2.3）：所有梯次一起看；分享指令、作品、工具、心得、問題；檔案放老師雲端，大檔直傳 ===== */
+(function(){
+'use strict';
+var C=window.CORE,A=window.APP,$=C.$,esc=A.esc,api=A.api,safeUrl=A.safeUrl;
+var CATS=['指令','作品','工具','心得','問題'],SMALL=25*1048576,MAXB=1024*1048576,CHUNK=8*1048576;
+var X={posts:[],comments:[],banned:false,bans:[]},has=false,f='全部',q='',OPEN={},busy=false,timer=0,seq=0;
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+function me(){return A.me()||{};}
+function isT(){return !!((A.who()&&A.who().teacher)||me().tcode);}
+function toast(m){C.toast(m);}
+function size(b){return b>=1073741824?(b/1073741824).toFixed(1)+' GB':b>=1048576?Math.round(b/1048576)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
+function ago(ts){var s=(Date.now()-ts)/1000;if(s<60)return '剛剛';if(s<3600)return Math.floor(s/60)+' 分鐘前';if(s<86400)return Math.floor(s/3600)+' 小時前';var d=new Date(ts);return (d.getMonth()+1)+'/'+d.getDate();}
+
+/* ---------- 示範模式：資料存在這台瀏覽器 ---------- */
+function ldb(){try{return JSON.parse(localStorage.getItem('aifleet_x'))||{posts:[],comments:[],likes:[],bans:[]};}catch(e){return {posts:[],comments:[],likes:[],bans:[]};}}
+function sdb(D){try{localStorage.setItem('aifleet_x',JSON.stringify(D));}catch(e){}}
+function local(a,d,cb){var D=ldb(),n=me().name,t=isT(),r={ok:true};
+ if(a==='x_list'){var ln={},mine={};D.likes.forEach(function(l){ln[l.post]=(ln[l.post]||0)+1;if(l.name===n)mine[l.post]=1;});
+  r={ok:true,posts:D.posts.filter(function(p){return p.status!=='deleted'&&(t||p.status!=='hidden');}).map(function(p){var o=JSON.parse(JSON.stringify(p));o.likes=ln[p.id]||0;o.liked=!!mine[p.id];if(!t)delete o.status;return o;}),
+   comments:D.comments.filter(function(c){return c.status!=='deleted'&&(t||c.status!=='hidden');}),banned:D.bans.indexOf(n)>=0,bans:t?D.bans:undefined};}
+ else if(a==='x_post'){if(D.bans.indexOf(n)>=0)r={ok:false,msg:'老師暫停了你的發文，有問題請直接找老師'};else if(!String(d.title||'').trim())r={ok:false,msg:'請寫你分享的是什麼'};
+  else{D.posts.push({id:'x'+Date.now(),ts:Date.now(),name:n,cohort:me().cohort||'',cat:d.cat,title:String(d.title).slice(0,60),note:String(d.note||'').slice(0,600),link:d.link||'',fileName:d.fileName||'',fileSize:d.fileSize||0,fileUrl:'',status:'ok',star:false,pin:false});}}
+ else if(a==='x_comment'){if(!String(d.text||'').trim())r={ok:false,msg:'請先打字'};else D.comments.push({id:'c'+Date.now(),ts:Date.now(),post:d.post,name:n,text:String(d.text).slice(0,400),status:'ok'});}
+ else if(a==='x_like'){var had=D.likes.some(function(l){return l.post===d.post&&l.name===n;});D.likes=D.likes.filter(function(l){return !(l.post===d.post&&l.name===n);});if(!had)D.likes.push({post:d.post,name:n});r={ok:true,liked:!had};}
+ else if(a==='x_mod'){if(d.op==='ban'||d.op==='unban'){if(!t)r={ok:false,msg:'只有老師可以用'};else{D.bans=D.bans.filter(function(x){return x!==d.who;});if(d.op==='ban')D.bans.push(d.who);r={ok:true,bans:D.bans};}}
+  else{var L=d.kind==='comment'?D.comments:D.posts,it=L.filter(function(x){return x.id===d.id;})[0];if(!it)r={ok:false,msg:'找不到這一則'};else if(!t&&!(d.op==='del'&&it.name===n))r={ok:false,msg:'只有老師可以用'};
+   else{if(d.op==='hide')it.status='hidden';else if(d.op==='show')it.status='ok';else if(d.op==='del')it.status='deleted';else if(d.op==='star'||d.op==='unstar')it.star=d.op==='star';else if(d.op==='pin'||d.op==='unpin')it.pin=d.op==='pin';}}}
+ else if(a==='x_upload')r={ok:false,msg:'示範模式不會真的上傳大檔案'};
+ sdb(D);setTimeout(function(){cb(r);},60);}
+function call(a,d,cb){if(A.local)return local(a,d||{},cb);api(a,d||{},cb);}
+
+/* ---------- 樣式 ---------- */
+var css=el('style');css.textContent=
+'#xBtn{display:none}#xBtn.on{display:inline-flex}'+
+'.xw .xhd{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;justify-content:space-between;margin-bottom:.8rem}.xw .xhd h2{margin:.1rem 0 0}.xw .xhd .cap{margin:.3rem 0 0;max-width:36rem}'+
+'.xw .xtool{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.4rem 0 .7rem}.xw .xtool .fld{margin:0;flex:1 1 14rem;min-width:0}'+
+'.xw .xchips{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem;scrollbar-width:none;margin-bottom:.6rem}.xw .xchips .chip{flex:none;min-height:2.3rem}.xw .xchips .chip[aria-pressed=true]{background:var(--ink);color:#0b0e1f;border-color:var(--ink)}'+
+'.xl{display:flex;flex-direction:column;gap:.7rem}.xp{border:1px solid var(--line);border-radius:1.1rem;padding:.9rem 1rem;background:var(--glass)}.xp.pin{border-color:rgba(255,212,0,.5)}.xp.hid{opacity:.55;border-style:dashed}'+
+'.xp .xt{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;font-size:.76rem;color:var(--mut);margin-bottom:.35rem}.xp .xt b{font-weight:800}'+
+'.xg{display:inline-block;font-size:.7rem;font-weight:800;border-radius:99px;padding:.08rem .55rem;background:rgba(91,123,255,.2);color:#c3d0ff}.xg.st{background:rgba(255,212,0,.18);color:var(--c2)}.xg.hd{background:rgba(255,143,163,.18);color:#ff9fb2}'+
+'.xp h3{margin:.1rem 0 .3rem;font-size:1.05rem;line-height:1.4}.xp .xn{white-space:pre-wrap;word-break:break-word;font-size:.9rem;line-height:1.6;color:#d8ddf5;margin:0}.xp .xn.cl{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}'+
+'.xp .xa{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.6rem}.xp .xa a{display:inline-flex;align-items:center;gap:.4rem;max-width:100%;border:1px solid var(--line);border-radius:.8rem;padding:.45rem .75rem;font-size:.84rem;color:var(--ink);text-decoration:none;background:rgba(255,255,255,.04)}.xp .xa a span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+'.xp .xa .xi{font-style:normal;font-size:.68rem;font-weight:800;background:rgba(91,123,255,.25);color:#c3d0ff;border-radius:.35rem;padding:.05rem .4rem;flex:none}.xp .xa small{color:var(--mut);flex:none}'+
+'.xp .xf{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin-top:.7rem}.xp .xf .chip{min-height:2.3rem}.xp .xf .chip[aria-pressed=true]{background:rgba(255,212,0,.16);border-color:rgba(255,212,0,.55);color:var(--c2)}.xp .xf .sp{flex:1}'+
+'.xp .xm{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem;padding-top:.55rem;border-top:1px dashed var(--line)}.xp .xm .chip{font-size:.72rem;min-height:2rem}'+
+'.xcm{margin-top:.6rem;display:flex;flex-direction:column;gap:.45rem}.xcm .c{font-size:.86rem;line-height:1.55;background:rgba(0,0,0,.22);border-radius:.8rem;padding:.5rem .7rem}.xcm .c b{margin-right:.4rem}.xcm .c small{color:var(--mut);margin-left:.4rem}.xcm .c.hid{opacity:.5}.xcm .c .chip{font-size:.68rem;min-height:1.7rem;padding:.1rem .5rem;margin-left:.3rem}'+
+'.xcm form{display:flex;gap:.45rem}.xcm .fld{margin:0;flex:1;min-width:0}'+
+'.xban{border:1px solid rgba(255,143,163,.4);background:rgba(255,143,163,.08);border-radius:1rem;padding:.7rem .9rem;font-size:.86rem;margin-bottom:.7rem}'+
+'.xadm{border:1px solid var(--line);border-radius:1rem;padding:.7rem .9rem;margin-bottom:.8rem}.xadm summary{cursor:pointer;font-weight:800;font-size:.88rem}.xadm .row{margin-top:.5rem}.xadm table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.5rem}.xadm td{padding:.35rem .4rem;border-bottom:1px solid var(--line)}'+
+'#xc .xcats{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0 .2rem}#xc .xcats .chip{min-height:2.4rem}#xc .xcats .chip[aria-pressed=true]{background:var(--c);border-color:var(--c);color:#fff}'+
+'#xc label.lb{display:block;font-size:.8rem;color:var(--mut);font-weight:700;margin-top:.8rem}#xc textarea.fld{min-height:6rem;resize:vertical}'+
+'#xc .xfile{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.45rem}#xc .xfile .nm{font-size:.84rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}'+
+'#xc .xbar{height:.55rem;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:.7rem}#xc .xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--c),#8fd3ff);transition:width .25s}'+
+'#xc .xmsg{font-size:.82rem;color:var(--mut);margin-top:.4rem;min-height:1.2em}#xc .xtip{font-size:.78rem;color:var(--mut);border-left:3px solid var(--c2);padding-left:.6rem;margin-top:.8rem}'+
+'@media (max-width:560px){#xBtn{padding:.35rem .6rem}.xp{padding:.8rem .85rem}.xp .xf .chip,.xw .xchips .chip,#xc .xcats .chip,#xc .row .chip,#xc .row .btn,.xw .xhd .chip,.xcm form .chip{min-height:2.75rem}.xcm .c .chip{min-height:2.2rem;padding:.2rem .7rem}.xw .xhd .row{width:100%}.xw .xhd .row .btn{flex:1}}';
+document.head.appendChild(css);
+
+/* ---------- 入口：上方的「交流區」 ---------- */
+var btn=el('button','chip','交流區');btn.id='xBtn';btn.type='button';
+var who=$('#who');who.parentNode.insertBefore(btn,$('#snd'));
+function sync(){btn.classList.toggle('on',!!me().name);}
+setInterval(sync,1500);sync();
+
+var m=el('div','modal','<div class="mbox full xw"><div class="xhd"><div><div class="kick">課後交流</div><h2>交流區</h2><p class="cap">所有梯次一起看。分享你用 AI 做的指令、作品、工具、心得，也可以發問；覺得有用就按「有幫助」。</p></div><div class="row" style="margin:0"><button class="btn" id="xNew" type="button">＋ 分享</button><button class="chip" id="xX" type="button">關閉</button></div></div><div id="xBan"></div><div id="xAdm"></div><div class="xtool"><input class="fld" id="xQ" placeholder="搜尋：標題、內容、名字…" aria-label="搜尋交流區"></div><div class="xchips" id="xF"></div><div class="xl" id="xL"><p class="cap">讀取中…</p></div></div>');
+m.id='xm';m.hidden=true;document.body.appendChild(m);
+var c=el('div','modal','<div class="mbox wide" id="xcBox"><div class="kick">交流區</div><h2>分享一則</h2><div class="xcats" id="xcCat"></div><label class="lb" for="xcT">你分享的是什麼？</label><input class="fld" id="xcT" maxlength="60" placeholder="例：我用 AI 做報價單的指令"><label class="lb" for="xcN">說明（怎麼用、效果怎樣）</label><textarea class="fld" id="xcN" maxlength="600" placeholder="寫一兩句就好，也可以直接貼指令"></textarea><label class="lb" for="xcL">連結（選填）</label><input class="fld" id="xcL" inputmode="url" placeholder="https://…"><label class="lb">檔案（選填，最大 1GB）</label><div class="xfile"><button class="chip" type="button" id="xcPick">選檔案</button><span class="nm" id="xcFN"></span><button class="chip" type="button" id="xcFX" hidden>拿掉</button><input type="file" id="xcF" hidden></div><div class="xbar" id="xcBar" hidden><i></i></div><div class="xmsg" id="xcMsg" aria-live="polite"></div><p class="xtip">有客戶資料、個資的檔案，先拿掉再分享。大檔案上傳時不要關掉這個畫面。</p><div class="row" style="justify-content:flex-end"><button class="chip" type="button" id="xcX">取消</button><button class="btn" type="button" id="xcGo">分享出去</button></div></div>');
+c.id='xc';c.hidden=true;document.body.appendChild(c);
+
+/* ---------- 讀取、畫面 ---------- */
+function load(quiet){var s=++seq;if(!has&&!quiet)$('#xL').innerHTML='<p class="cap">讀取中…</p>';call('x_list',{},function(r){if(s!==seq)return;if(!r||!r.ok){if(!quiet)toast((r&&r.msg)||'讀不到交流區，請再試一次');return;}X=r;has=true;paint();});}
+function cnt(id){return X.comments.filter(function(x){return x.post===id;}).length;}
+function list(){var n=me().name,qq=q.toLowerCase();
+ return X.posts.filter(function(p){if(f==='精選'&&!p.star)return false;if(f==='我的'&&p.name!==n)return false;if(CATS.indexOf(f)>=0&&p.cat!==f)return false;
+  if(qq&&[p.title,p.note,p.name,p.fileName].join(' ').toLowerCase().indexOf(qq)<0)return false;return true;})
+  .sort(function(a,b){return (b.pin?1:0)-(a.pin?1:0)||b.ts-a.ts;});}
+function paint(){if(m.hidden)return;var t=isT(),n=me().name;
+ $('#xBan').innerHTML=X.banned?'<div class="xban">老師暫停了你的發文和留言，還是可以看大家的分享。有問題請直接找老師。</div>':'';
+ $('#xNew').hidden=!!X.banned;
+ var F=['全部','精選'].concat(CATS).concat(['我的']);
+ $('#xF').innerHTML=F.map(function(k){var nn=k==='全部'?X.posts.length:k==='精選'?X.posts.filter(function(p){return p.star;}).length:k==='我的'?X.posts.filter(function(p){return p.name===n;}).length:X.posts.filter(function(p){return p.cat===k;}).length;return '<button class="chip" type="button" data-xf="'+k+'" aria-pressed="'+(f===k)+'">'+k+(nn?' '+nn:'')+'</button>';}).join('');
+ $('#xAdm').innerHTML=t?adm():'';
+ var L=list();
+ $('#xL').innerHTML=L.length?L.map(card).join(''):'<p class="cap" style="text-align:center;padding:1.6rem 0">'+(X.posts.length?'沒有符合的分享。':'還沒有人分享。按「＋ 分享」，當第一個。')+'</p>';}
+function card(p){var t=isT(),mine=p.name===me().name,u=safeUrl(p.link),fu=safeUrl(p.fileUrl),nc=cnt(p.id),h='';
+ h+='<div class="xp'+(p.pin?' pin':'')+(p.status==='hidden'?' hid':'')+'" data-x="'+esc(p.id)+'"><div class="xt"><span class="xg">'+esc(p.cat)+'</span>'+(p.star?'<span class="xg st">精選</span>':'')+(p.pin?'<span class="xg st">置頂</span>':'')+(p.status==='hidden'?'<span class="xg hd">已藏起來</span>':'')+'<b>'+esc(p.name)+'</b>'+(p.cohort?'<span>'+esc(p.cohort)+' 梯</span>':'')+'<span>'+ago(p.ts)+'</span></div>';
+ h+='<h3>'+esc(p.title)+'</h3>'+(p.note?'<p class="xn'+(OPEN[p.id]?'':' cl')+'">'+esc(p.note)+'</p>':'');
+ if(u||p.fileName){h+='<div class="xa">';if(u)h+='<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer"><i class="xi">連結</i><span>'+esc(u.replace(/^https?:\/\//,'').slice(0,48))+'</span></a>';if(p.fileName)h+=fu?'<a href="'+esc(fu)+'" target="_blank" rel="noopener noreferrer"><i class="xi">檔案</i><span>'+esc(p.fileName)+'</span><small>'+size(p.fileSize)+'</small></a>':'<a aria-disabled="true"><i class="xi">檔案</i><span>'+esc(p.fileName)+'</span><small>'+(A.local?'示範模式沒有真的上傳':'')+'</small></a>';h+='</div>';}
+ h+='<div class="xf"><button class="chip" type="button" data-xa="like" aria-pressed="'+!!p.liked+'">有幫助'+(p.likes?' '+p.likes:'')+'</button><button class="chip" type="button" data-xa="open" aria-expanded="'+!!OPEN[p.id]+'">留言'+(nc?' '+nc:'')+'</button><span class="sp"></span>'+(mine&&!t?'<button class="chip" type="button" data-xa="del">刪掉</button>':'')+'</div>';
+ if(t)h+='<div class="xm"><button class="chip" type="button" data-xa="'+(p.star?'unstar':'star')+'">'+(p.star?'取消精選（扣回 100 分）':'精選（加 100 分）')+'</button><button class="chip" type="button" data-xa="'+(p.pin?'unpin':'pin')+'">'+(p.pin?'取消置頂':'置頂')+'</button><button class="chip" type="button" data-xa="'+(p.status==='hidden'?'show':'hide')+'">'+(p.status==='hidden'?'救回來':'藏起來')+'</button><button class="chip" type="button" data-xa="del">刪掉</button>'+(p.name!=='老師'?'<button class="chip" type="button" data-xa="ban" data-who="'+esc(p.name)+'">'+((X.bans||[]).indexOf(p.name)>=0?'恢復 '+esc(p.name)+' 發文':'停止 '+esc(p.name)+' 發文')+'</button>':'')+'</div>';
+ if(OPEN[p.id])h+=comments(p);
+ return h+'</div>';}
+function comments(p){var t=isT(),n=me().name,L=X.comments.filter(function(x){return x.post===p.id;}).sort(function(a,b){return a.ts-b.ts;});
+ var h='<div class="xcm">'+L.map(function(x){return '<div class="c'+(x.status==='hidden'?' hid':'')+'" data-c="'+esc(x.id)+'"><b>'+esc(x.name)+'</b>'+esc(x.text)+'<small>'+ago(x.ts)+'</small>'+(t?'<button class="chip" type="button" data-ca="'+(x.status==='hidden'?'show':'hide')+'">'+(x.status==='hidden'?'救回':'藏')+'</button><button class="chip" type="button" data-ca="del">刪</button>':(x.name===n?'<button class="chip" type="button" data-ca="del">刪</button>':''))+'</div>';}).join('');
+ if(!X.banned)h+='<form data-cf="'+esc(p.id)+'"><input class="fld" maxlength="400" placeholder="留言，按 Enter 送出" aria-label="留言"><button class="chip" type="submit">送出</button></form>';
+ return h+'</div>';}
+function adm(){var F=X.posts.filter(function(p){return p.fileName&&p.fileSize;}).sort(function(a,b){return b.fileSize-a.fileSize;}),tot=F.reduce(function(s,p){return s+p.fileSize;},0),B=X.bans||[];
+ var h='<details class="xadm"><summary>老師管理：檔案 '+F.length+' 個（共 '+(tot?size(tot):'0 MB')+'）・停權 '+B.length+' 人</summary>';
+ h+=B.length?'<div class="row">'+B.map(function(b){return '<button class="chip" type="button" data-unban="'+esc(b)+'">恢復 '+esc(b)+' 發文</button>';}).join('')+'</div>':'<p class="cap">目前沒有人被停權。</p>';
+ if(F.length)h+='<p class="cap" style="margin-top:.6rem">檔案都放在雲端硬碟「AI實戰課_交流區」資料夾。在這裡把那則分享刪掉，檔案會一起丟進垃圾桶。</p><table>'+F.map(function(p){return '<tr><td>'+esc(p.fileName)+'</td><td>'+esc(p.name)+'</td><td style="white-space:nowrap">'+size(p.fileSize)+'</td><td style="white-space:nowrap">'+ago(p.ts)+'</td></tr>';}).join('')+'</table>';
+ return h+'</details>';}
+
+/* ---------- 開關 ---------- */
+function open(){A.modal('xm',true);paint();load();clearInterval(timer);timer=setInterval(function(){if(m.hidden||!c.hidden){return;}load(true);},30000);}
+function close(){A.modal('xm',false);clearInterval(timer);}
+btn.onclick=open;$('#xX').onclick=close;
+m.addEventListener('click',function(e){if(e.target===m)close();});
+document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;if(!c.hidden&&!busy){e.stopImmediatePropagation();closeC();}else if(!m.hidden&&c.hidden){e.stopImmediatePropagation();close();}},true);
+$('#xQ').addEventListener('input',function(){q=this.value.trim();paint();});
+$('#xF').addEventListener('click',function(e){var b=e.target.closest('[data-xf]');if(!b)return;f=b.dataset.xf;paint();});
+
+/* ---------- 卡片上的按鈕 ---------- */
+var armed=null;
+function confirm2(b,txt){if(armed===b)return true;if(armed&&armed._t){armed.textContent=armed._t;}armed=b;b._t=b.textContent;b.textContent=txt;setTimeout(function(){if(armed===b){b.textContent=b._t;armed=null;}},3000);return false;}
+$('#xL').addEventListener('click',function(e){
+ var ub=e.target.closest('[data-xa]'),cb=e.target.closest('[data-ca]');
+ if(cb){var cid=cb.closest('[data-c]').dataset.c,op=cb.dataset.ca;if(op==='del'&&!confirm2(cb,'確定刪？'))return;mod({kind:'comment',id:cid,op:op},op==='del'?'留言刪掉了':op==='hide'?'藏起來了':'救回來了');return;}
+ if(!ub)return;var pid=ub.closest('[data-x]').dataset.x,a=ub.dataset.xa,p=X.posts.filter(function(x){return x.id===pid;})[0];if(!p)return;
+ if(a==='open'){OPEN[pid]=!OPEN[pid];paint();if(OPEN[pid]){var inp=m.querySelector('[data-cf="'+pid+'"] input');if(inp)inp.focus({preventScroll:true});}return;}
+ if(a==='like'){p.liked=!p.liked;p.likes+=p.liked?1:-1;paint();call('x_like',{post:pid},function(r){if(!r||!r.ok){p.liked=!p.liked;p.likes+=p.liked?1:-1;paint();toast((r&&r.msg)||'沒按到，請再按一次');}});return;}
+ if(a==='ban'){var w=ub.dataset.who,on=(X.bans||[]).indexOf(w)<0;if(on&&!confirm2(ub,'再按一次，停止 '+w+' 發文'))return;call('x_mod',{op:on?'ban':'unban',who:w},function(r){if(!r||!r.ok)return toast((r&&r.msg)||'沒改到');X.bans=r.bans;toast(on?w+' 不能發文了，還是看得到':w+' 可以發文了');paint();});return;}
+ if(a==='del'&&!confirm2(ub,'再按一次刪掉'))return;
+ mod({kind:'post',id:pid,op:a},{del:'刪掉了',hide:'藏起來了，學生看不到',show:'救回來了',star:'設成精選，'+p.name+' 加 100 分',unstar:'取消精選，扣回 100 分',pin:'置頂了',unpin:'取消置頂'}[a]);});
+$('#xAdm').addEventListener('click',function(e){var b=e.target.closest('[data-unban]');if(!b)return;var w=b.dataset.unban;call('x_mod',{op:'unban',who:w},function(r){if(!r||!r.ok)return toast((r&&r.msg)||'沒改到');X.bans=r.bans;toast(w+' 可以發文了');paint();});});
+function mod(d,ok){var snap=JSON.stringify(X),L=d.kind==='comment'?X.comments:X.posts,it=L.filter(function(x){return x.id===d.id;})[0];
+ if(it){if(d.op==='del'){L.splice(L.indexOf(it),1);}else if(d.op==='hide')it.status='hidden';else if(d.op==='show')it.status='ok';else if(d.op==='star'||d.op==='unstar')it.star=d.op==='star';else if(d.op==='pin'||d.op==='unpin')it.pin=d.op==='pin';}
+ paint();toast(ok);call('x_mod',d,function(r){if(!r||!r.ok){X=JSON.parse(snap);paint();toast((r&&r.msg)||'剛剛沒有改成功，請再按一次');}});}
+m.addEventListener('submit',function(e){var fm=e.target.closest('[data-cf]');if(!fm)return;e.preventDefault();var inp=fm.querySelector('input'),v=inp.value.trim();if(!v)return;var pid=fm.dataset.cf,tmp={id:'tmp'+Date.now(),ts:Date.now(),post:pid,name:me().name,text:v};
+ X.comments.push(tmp);inp.value='';paint();var ni=m.querySelector('[data-cf="'+pid+'"] input');if(ni)ni.focus({preventScroll:true});
+ call('x_comment',{post:pid,text:v},function(r){if(!r||!r.ok){X.comments=X.comments.filter(function(x){return x!==tmp;});paint();toast((r&&r.msg)||'留言沒送出，請再試一次');return;}tmp.id=r.id;});});
+
+/* ---------- 發一則 ---------- */
+var cat='心得',file=null;
+function closeC(){if(busy)return;A.modal('xc',false);A.modal('xm',true);}
+$('#xNew').onclick=function(){if(X.banned)return;$('#xcCat').innerHTML=CATS.map(function(k){return '<button class="chip" type="button" data-cat="'+k+'" aria-pressed="'+(k===cat)+'">'+k+'</button>';}).join('');$('#xcMsg').textContent='';$('#xcBar').hidden=true;A.modal('xc',true);setTimeout(function(){$('#xcT').focus();},60);};
+$('#xcCat').addEventListener('click',function(e){var b=e.target.closest('[data-cat]');if(!b)return;cat=b.dataset.cat;[].forEach.call(this.children,function(x){x.setAttribute('aria-pressed',x===b);});});
+$('#xcX').onclick=closeC;c.addEventListener('click',function(e){if(e.target===c)closeC();});
+$('#xcPick').onclick=function(){$('#xcF').click();};
+$('#xcF').addEventListener('change',function(){var fl=this.files[0];if(!fl)return;if(fl.size>MAXB){toast('一個檔案最大 1GB，影片可以先傳到 YouTube 再貼連結');this.value='';return;}file=fl;$('#xcFN').textContent=fl.name+'（'+size(fl.size)+'）';$('#xcFX').hidden=false;});
+$('#xcFX').onclick=function(){file=null;$('#xcF').value='';$('#xcFN').textContent='';this.hidden=true;};
+function bar(p,msg){$('#xcBar').hidden=false;$('#xcBar').firstChild.style.width=Math.round(p*100)+'%';if(msg)$('#xcMsg').textContent=msg;}
+function guard(e){e.preventDefault();e.returnValue='';}
+function done(ok,msg){busy=false;window.removeEventListener('beforeunload',guard);$('#xcGo').disabled=false;$('#xcGo').textContent='分享出去';$('#xcX').disabled=false;
+ if(!ok){$('#xcMsg').textContent=msg||'沒有分享成功，請再試一次';return;}
+ $('#xcT').value='';$('#xcN').value='';$('#xcL').value='';$('#xcFX').onclick.call($('#xcFX'));$('#xcBar').hidden=true;$('#xcMsg').textContent='';
+ cat='心得';A.modal('xc',false);A.modal('xm',true);f='全部';q='';$('#xQ').value='';toast('分享出去了，謝謝你');C.beep&&C.beep(880,.1);load();}
+$('#xcGo').onclick=function(){if(busy)return;var t=$('#xcT').value.trim(),l=$('#xcL').value.trim();
+ if(!t){$('#xcMsg').textContent='先寫你分享的是什麼';$('#xcT').focus();return;}
+ if(l&&!/^https?:\/\/\S+$/i.test(l)){$('#xcMsg').textContent='連結要以 http 或 https 開頭';$('#xcL').focus();return;}
+ var d={cat:cat,title:t,note:$('#xcN').value.trim(),link:l};
+ busy=true;window.addEventListener('beforeunload',guard);$('#xcGo').disabled=true;$('#xcGo').textContent='分享中…';$('#xcX').disabled=true;
+ if(!file){call('x_post',d,function(r){done(r&&r.ok,r&&r.msg);});return;}
+ d.fileName=file.name;d.mime=file.type||'application/octet-stream';d.fileSize=file.size;
+ if(A.local){call('x_post',d,function(r){done(r&&r.ok,r&&r.msg);});return;}
+ if(file.size<=SMALL){bar(.15,'上傳中…');var fr=new FileReader();fr.onload=function(){bar(.6,'上傳中…');d.fileData=String(fr.result).split(',')[1]||'';call('x_post',d,function(r){bar(1);done(r&&r.ok,r&&r.msg);});};fr.onerror=function(){done(false,'讀不到檔案，請重新選一次');};fr.readAsDataURL(file);return;}
+ bar(0,'準備上傳…');
+ call('x_upload',{fileName:file.name,mime:d.mime,size:file.size,origin:location.origin},function(r){if(!r||!r.ok)return done(false,(r&&r.msg)||'上傳準備失敗，請再試一次');
+  big(file,r.url,function(id,err){if(!id)return done(false,err);bar(1,'上傳好了，分享中…');d.fileId=id;call('x_post',d,function(r2){done(r2&&r2.ok,r2&&r2.msg);});});});};
+
+/* 大檔：一段一段傳（每段 8MB），斷掉會問雲端傳到哪裡，從那裡接著傳 */
+function big(fl,url,cb){var off=0,tries=0,N=fl.size;
+ function next(){var end=Math.min(off+CHUNK,N);bar(off/N,'上傳中… '+size(off)+' / '+size(N)+'（不要關掉這個畫面）');
+  fetch(url,{method:'PUT',headers:{'Content-Range':'bytes '+off+'-'+(end-1)+'/'+N},body:fl.slice(off,end)}).then(function(res){
+   if(res.status===308){var rg=res.headers.get('Range');off=rg?(+rg.split('-')[1]+1):end;tries=0;return next();}
+   if(res.ok)return res.json().then(function(j){cb(j&&j.id,'上傳好了，但讀不到檔案編號');});
+   if(res.status===404||res.status===410)return cb(null,'上傳逾時了，請重新分享一次');
+   throw new Error('s'+res.status);}).catch(function(){if(++tries>5)return cb(null,'網路一直斷，大檔案傳不上去。可以換個網路再試，或先傳到自己的雲端、改貼連結');
+   setTimeout(function(){fetch(url,{method:'PUT',headers:{'Content-Range':'bytes */'+N}}).then(function(res){if(res.status===308){var rg=res.headers.get('Range');off=rg?(+rg.split('-')[1]+1):0;next();}else if(res.ok)res.json().then(function(j){cb(j&&j.id,'');});else next();}).catch(next);},1500*tries);});}
+ next();}
+
+window.XCHAT={open:open,_reload:load};
+})();
+
+</script>
 </body>
 </html>
