@@ -5631,7 +5631,7 @@ function mkFlag(){var F=window.__FLAG;if(flag||!F||!F.ship||!F.rig)return;try{pa
   R.matrixAutoUpdate=false;sceneR.add(R);flag={R:R,h:h,minY:bx.min.y,sA:6.6/Math.max(.1,h),flame:fl};
   if(F.scene)F.scene.children.forEach(function(c){if(c!==F.rig&&!c.isLight&&!c.isPoints)c.visible=false;});}catch(e){console.warn('flag',e);flag=null;}}
 /* 開場：最大那支火箭最後一個從高空降下來，停進母港 */
-var arrCut=false,arrHit=false,arrT=-1,arrLift=60,arrFlame=0,cArr=0,arrDone=false,cheerA=false,cheerWas=false;
+var arrOn=false,arrCut=false,arrHit=false,arrT=-1,arrLift=60,arrFlame=0,cArr=0,arrDone=false,cheerA=false,cheerWas=false;
 var voteOn=false,uS=0,stt='mine',froz=false,ign=false,cheer=0,rmU=0,rmP=false,pA=new T.Vector3(),qA=new T.Quaternion(),sA3=new T.Vector3(),pB=new T.Vector3(),qB=new T.Quaternion(),sB3=new T.Vector3(),Bm=new T.Matrix4(),rocketW=new T.Vector3(0,4,0);
 function origClosed(){var F=window.__FLAG;if(!F)return true;return F.pods.every(function(p){return (p.userData.ci||0)<.004&&Math.abs(p.position.y-p.userData.y)<.004;});}
 function rocketTick(u,now){if(!flag)return;var F=window.__FLAG,R=flag.R,i,o,c;F.rig.updateMatrixWorld(true);
@@ -5658,9 +5658,13 @@ function mkShips(){if(ships.length||!window.__SHIPX)return;for(var i=0;i<5;i++){
 function padWorld(I,out){return out.copy(I.pad).setY(I.pad.y+.72).add(I.g.position);}
 var PE=new T.Euler();function parkQuat(I,q){/* 停好的時候船身橫擺，從正面看得到整艘船 */return q.setFromEuler(PE.set(0,[.25,-.2,.3,-.3,.12][I.i],0));}
 function park(s){var I=isles[s.i];if(s.h.parent!==I.g){I.g.add(s.h);}s.h.position.copy(I.pad).setY(I.pad.y+.72);parkQuat(I,s.h.quaternion);s.state='parked';s.t=1;s.pl.forEach(function(p){p[0].material.opacity=p[1]*.12;});I.litT=1;}
-function launchAll(){if(!ships.length)return;flying=true;landed=false;ships.forEach(function(s,k){var I=isles[s.i];scene.add(s.h);I.litT=0;I.lit=0;var a=(k/5+.08+Math.random()*.1)*PI*2,r=21+Math.random()*7;
+function launchAll(){if(!ships.length)return;flying=true;landed=false;
+ /* 五艘同時出發，用飛行秒數錯開落地（2.0～3.6 秒，順序每次洗牌）；旗艦跟著進場、最後一個停 */
+ var DUR=[2,2.4,2.8,3.2,3.6];for(var q=4;q>0;q--){var w=Math.floor(Math.random()*(q+1)),x=DUR[q];DUR[q]=DUR[w];DUR[w]=x;}
+ if(scrollY>H*.05||uS>.02){arrOn=false;arrDone=true;arrLift=0;arrFlame=0;}else{arrOn=true;arrDone=false;arrCut=false;arrHit=false;arrT=-1.4;arrLift=60;}
+ ships.forEach(function(s,k){s.durN=DUR[k];var I=isles[s.i];scene.add(s.h);I.litT=0;I.lit=0;var a=(k/5+.08+Math.random()*.1)*PI*2,r=21+Math.random()*7;
   s.p0=new T.Vector3(Math.cos(a)*r,7+Math.random()*7,Math.sin(a)*r*.75-3);s.p3=padWorld(I,new T.Vector3());s.p2=s.p3.clone().add(new T.Vector3(-7,3.4,[-1.8,1.4,-2.1,2.1,-.8][s.i]));s.p1=s.p0.clone().lerp(s.p2,.45).add(new T.Vector3((Math.random()-.5)*20,10,(Math.random()-.5)*20));
-  s.q1=parkQuat(I,new T.Quaternion());s.t=-k*.38-.5;s.dur=3.1;s.q0=null;s.state='fly';s.h.position.copy(s.p0);s.h.visible=true;s.pl.forEach(function(p){p[0].material.opacity=p[1];});});}
+  s.q1=parkQuat(I,new T.Quaternion());s.t=-.3/s.durN;s.dur=s.durN;s.q0=null;s.state='fly';s.h.position.copy(s.p0);s.h.visible=true;s.pl.forEach(function(p){p[0].material.opacity=p[1];});});}
 function bez(s,t,out){var u=1-t;return out.set(0,0,0).addScaledVector(s.p0,u*u*u).addScaledVector(s.p1,3*u*u*t).addScaledVector(s.p2,3*u*t*t).addScaledVector(s.p3,t*t*t);}
 var flying=false,qa=new T.Quaternion();
 function shipTick(dt,now){var any=false;ships.forEach(function(s){if(s.state==='fly'){any=true;s.t+=dt/s.dur;s.h.visible=true;if(s.t<0){s.h.position.copy(s.p0);s.h.position.y+=Math.sin(now/500+s.i)*.25;if(!s.q0){bez(s,.02,tv3).sub(s.p0);var x0=tv3.normalize(),z0=tv.copy(x0).cross(UP).normalize(),y0=tv2.copy(z0).cross(x0);tm.makeBasis(x0,y0,z0);s.q0=new T.Quaternion().setFromRotationMatrix(tm);}s.h.quaternion.copy(s.q0);return;}var t=Math.min(1,s.t),e=1-Math.pow(1-t,2.4),I=isles[s.i];s.p3.copy(I.pad).setY(I.pad.y+.72).add(I.g.position);
@@ -5672,7 +5676,7 @@ function shipTick(dt,now){var any=false;ships.forEach(function(s){if(s.state==='
 function scr(obj,off,out){tv.copy(off||ZERO).applyMatrix4(obj.matrixWorld).project(cam);out.x=(tv.x*.5+.5)*W;out.y=(.5-tv.y*.5)*H;out.z=tv.z;return out;}
 var ZERO=new T.Vector3(),sp2={x:0,y:0,z:0};
 function landFx(s){var I=isles[s.i];if(on>.5&&!document.body.dataset.modal){scr(s.h,null,sp2);C.burst(sp2.x,sp2.y,ST[s.i].k);C.beep(420+s.i*90,.14,'triangle');}I.lab.el.classList.add('hot');setTimeout(function(){I.lab.el.classList.remove('hot');},600);}
-var landed=false;function onLanded(){landed=true;if(!arrDone&&arrT<0){if(RM||scrollY>H*.05){arrDone=true;arrLift=0;}else arrT=0;}if(!megaT)megaT=setTimeout(megaLoop,1800);setTimeout(askLook,1400);}
+var landed=false;function onLanded(){landed=true;if(!arrOn){arrDone=true;arrLift=0;}if(!megaT)megaT=setTimeout(megaLoop,1800);setTimeout(askLook,(arrOn&&!arrDone)?4600:1400);}
 function askLook(){if(hasLook||wardOn||myName()==='我')return;var w=setInterval(function(){if(document.body.dataset.modal||document.body.classList.contains('in-station')||flying||voteOn)return;clearInterval(w);if(!hasLook&&on>.9)openWard($('#ibWard'));},400);}
 
 /* ---------- 太空人（展示版：全部是假的，自己走來走去） ---------- */
@@ -5715,8 +5719,8 @@ var demo=el('div',null,'展示版');demo.id='isldemo';if(!window.ISL_PROD)docume
 var megaBox=el('div');megaBox.id='islmega';document.body.appendChild(megaBox);
 $('#islhint').textContent=matchMedia('(pointer:coarse)').matches?'單指拖：轉視角 ・ 雙指：縮放、旋轉、傾斜 ・ 點島：貼近看':'拖曳轉視角 ・ 觸控板捏合縮放 ・ 點島進站 ・ 往下捲，旗艦升空';
 $('#ibName').onclick=function(){var v=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',v);document.body.classList.toggle('nonames',!v);C.beep(500,.06);};
-var playTxt=ICON.play+'重播降落';$('#ibPlay').onclick=function(){if(flying){ships.forEach(function(s){if(s.state==='fly')park(s);});return;}if(RM){C.toast('已開啟「減少動態」，船直接停在島上');return;}launchAll();C.beep(300,.1);};
-function playLabel(){var b=$('#ibPlay'),f=flying?'1':'';if(b.dataset.f!==f){b.dataset.f=f;b.innerHTML=flying?(ICON.play+'跳過降落'):playTxt;}}
+var playTxt=ICON.play+'重播降落';$('#ibPlay').onclick=function(){if(flying||(arrOn&&!arrDone)){ships.forEach(function(s){if(s.state==='fly')park(s);});if(arrOn&&!arrDone){arrDone=true;arrCut=true;arrLift=0;arrFlame=0;cheerA=false;}return;}if(RM){C.toast('已開啟「減少動態」，船直接停在島上');return;}launchAll();C.beep(300,.1);};
+function playLabel(){var fl2=flying||(arrOn&&!arrDone),b=$('#ibPlay'),f=fl2?'1':'';if(b.dataset.f!==f){b.dataset.f=f;b.innerHTML=fl2?(ICON.play+'跳過降落'):playTxt;}}
 $('#ibWard').onclick=function(){openWard(this);};$('#ibGo').onclick=function(e){goIsle(0,e.clientX,e.clientY);};
 /* 熱鬧：示範用的同學、對話泡泡、大聲公。可以自己關；投票一開始會自動收起來，投完自動回來 */
 var live=lsGet('aifleet_live')!==0,liveEff=true;$('#ibLive').setAttribute('aria-pressed',live);
@@ -5881,9 +5885,9 @@ function frame(now){requestAnimationFrame(frame);var rdt=Math.min((now-last)/100
  if(!RM){spin.forEach(function(q){if(q[3]==='z')q[0].rotation.z+=dt*q[1];else if(q[2])q[0].rotation.y=Math.sin(t*q[1])*q[2];else q[0].rotation.y+=dt*q[1];});planets.forEach(function(p){p.children[0].rotation.y+=dt*p.userData.sp;});bg.rotation.y=t*.0025;}
  beads.forEach(function(q,i){q.cu.getPoint((q.o+t*q.sp)%1,bd0.position);bd0.updateMatrix();beadM.setMatrixAt(i,bd0.matrix);});beadM.instanceMatrix.needsUpdate=true;
  /* 開場降落：火箭一定會降完；鏡頭貼近那一拍只要使用者一碰畫面或開始捲動就讓開（可打斷） */
- var cTgt=0;if(arrT>=0&&!arrDone){arrT+=dt;var ae=Math.min(1,arrT/3.6),ee=1-Math.pow(1-ae,3);arrLift=60*(1-ee);arrFlame=ae<1?Math.min(1,.35+ae)*(1-sm((ae-.9)/.1)):0;if(np>0||dragging||uS>.02||md||wardOn||st)arrCut=true;
-   if(!arrCut)cTgt=sm((arrT-.6)/1.3)*(1-sm((arrT-5.2)/1.1));cheerA=!arrCut&&arrT>1.6&&arrT<5.4;
-   if(ae>=1&&!arrHit){arrHit=true;scr(port.g,tv2.set(0,.8,0),sp2);C.burst(sp2.x,sp2.y,'#FFD400');C.beep(180,.25,'triangle',.06);C.beep(360,.18,'triangle',.04);}if(arrT>6.4){arrDone=true;arrLift=0;arrFlame=0;cheerA=false;}}
+ var cTgt=0;if(arrOn&&!arrDone){arrT+=dt;var ae=Math.max(0,Math.min(1,arrT/3.6)),ee=1-Math.pow(1-ae,3);arrLift=60*(1-ee);arrFlame=(arrT>0&&ae<1)?Math.min(1,.35+ae)*(1-sm((ae-.9)/.1)):0;if(np>0||dragging||uS>.02||md||wardOn||st)arrCut=true;
+   if(!arrCut)cTgt=sm((arrT-2.2)/1.2)*(1-sm((arrT-5.6)/1.1));cheerA=!arrCut&&arrT>2.7&&arrT<5.8;
+   if(ae>=1&&!arrHit){arrHit=true;scr(port.g,tv2.set(0,.8,0),sp2);C.burst(sp2.x,sp2.y,'#FFD400');C.beep(180,.25,'triangle',.06);C.beep(360,.18,'triangle',.04);}if(arrT>7){arrDone=true;arrLift=0;arrFlame=0;cheerA=false;}}
  cArr=arrCut?cArr+(0-cArr)*Math.min(1,dt*7):cTgt;
  shipTick(dt,now);astroTick(dt,t);chatTick(dt);playLabel();
  scene.updateMatrixWorld();
