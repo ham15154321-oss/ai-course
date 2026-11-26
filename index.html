@@ -5363,11 +5363,14 @@ body.isl canvas#isl{transition:none}body.islrmfade canvas#isl,body.islrmfade can
 @media (prefers-reduced-motion:reduce){canvas#isl,body.isl canvas#gl{transition:opacity .2s ease}}
 body.isl .hero:before{display:none}#islhud h1,#islhud .lead,#islhud .kick,#islhud .hint,#islfly h2,#islfly .kick{text-shadow:0 2px 18px rgba(2,7,10,.9),0 0 2px rgba(2,7,10,.8)}
 body.islward #isllabs,body.islward #islmega{display:none}#wardopt{overscroll-behavior:contain}#ward{overscroll-behavior:contain}
-#isldown{position:absolute;left:50%;bottom:1.1rem;transform:translateX(-50%);z-index:3;display:inline-flex!important;align-items:center;gap:.35rem;appearance:none;border:1px solid rgba(255,255,255,.22);background:rgba(2,7,10,.6);color:#eef1ff;font:700 .78rem/1 system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:.6rem .9rem;border-radius:999px;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .1s ease-out,opacity .2s}
+#isldown{position:fixed;left:50%;bottom:max(.7rem,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:58;display:inline-flex;align-items:center;gap:.35rem;appearance:none;border:1px solid rgba(255,255,255,.26);background:rgba(2,7,10,.82);color:#eef1ff;font:800 .84rem/1 system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;min-height:44px;padding:.8rem 1.15rem;border-radius:999px;cursor:pointer;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 26px rgba(0,0,0,.5);transition:transform .12s ease-out,opacity .22s,visibility 0s}
+#isldown.off{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,visibility 0s .22s}
 #isldown:active{transform:translateX(-50%) scale(.96)}#isldown svg{width:.95rem;height:.95rem;animation:isldn 1.8s ease-in-out infinite}
 @keyframes isldn{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
-@media (min-width:860px){#isldown{left:auto;right:6vw;transform:none}#isldown:active{transform:scale(.96)}}
 @media (prefers-reduced-motion:reduce){#isldown svg{animation:none}}
+body.voteonly #isldown{display:none}
+@media (max-width:859px){body.isl .hero{padding-bottom:calc(4.6rem + env(safe-area-inset-bottom))}}
+body.islgo .il.isle,body.islgo .il.oc,body.islgo .il.who>em{opacity:0;transition:opacity .25s}.il.isle,.il.oc,.il.who>em{transition:opacity .25s}
 #islfps{position:fixed;left:.6rem;top:4rem;z-index:90;font:700 .72rem/1.2 ui-monospace,Menlo,monospace;color:#B6F500;background:rgba(0,0,0,.72);padding:.4rem .55rem;border-radius:.5rem;pointer-events:none}
 .il.who.hot>em{border-color:#fff}
 
@@ -5627,15 +5630,17 @@ function mkFlag(){var F=window.__FLAG;if(flag||!F||!F.ship||!F.rig)return;try{pa
   var fs=new T.Sprite(new T.SpriteMaterial({map:glowTex,color:0xffb060,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,fog:false}));fs.scale.setScalar(4.2);fs.userData.o=.9;fl.add(fs);fl.visible=false;R.add(fl);
   R.matrixAutoUpdate=false;sceneR.add(R);flag={R:R,h:h,minY:bx.min.y,sA:6.6/Math.max(.1,h),flame:fl};
   if(F.scene)F.scene.children.forEach(function(c){if(c!==F.rig&&!c.isLight&&!c.isPoints)c.visible=false;});}catch(e){console.warn('flag',e);flag=null;}}
+/* 開場：最大那支火箭最後一個從高空降下來，停進母港 */
+var arrCut=false,arrHit=false,arrT=-1,arrLift=60,arrFlame=0,cArr=0,arrDone=false,cheerA=false,cheerWas=false;
 var voteOn=false,uS=0,stt='mine',froz=false,ign=false,cheer=0,rmU=0,rmP=false,pA=new T.Vector3(),qA=new T.Quaternion(),sA3=new T.Vector3(),pB=new T.Vector3(),qB=new T.Quaternion(),sB3=new T.Vector3(),Bm=new T.Matrix4(),rocketW=new T.Vector3(0,4,0);
 function origClosed(){var F=window.__FLAG;if(!F)return true;return F.pods.every(function(p){return (p.userData.ci||0)<.004&&Math.abs(p.position.y-p.userData.y)<.004;});}
 function rocketTick(u,now){if(!flag)return;var F=window.__FLAG,R=flag.R,i,o,c;F.rig.updateMatrixWorld(true);
  for(i=1;i<pairs.length;i++){o=pairs[i][0];c=pairs[i][1];c.position.copy(o.position);c.quaternion.copy(o.quaternion);c.scale.copy(o.scale);c.visible=o.visible;if(c.material&&o.material)c.material.opacity=o.material.opacity;}
  /* 起點：站在母港上、直直往上升；終點：跟原本那支火箭在畫面上完全重疊 */
- var lift=14*Math.pow(u,1.7);port.g.getWorldPosition(pA);pA.y+=.5-flag.minY*flag.sA+lift;qA.setFromAxisAngle(UP,F.ship.rotation.y);sA3.setScalar(flag.sA);
+ var lift=14*Math.pow(u,1.7)+arrLift;port.g.getWorldPosition(pA);pA.y+=.5-flag.minY*flag.sA+lift;qA.setFromAxisAngle(UP,F.ship.rotation.y);sA3.setScalar(flag.sA);
  Bm.multiplyMatrices(cam.matrixWorld,camOI).multiply(F.ship.matrixWorld);Bm.decompose(pB,qB,sB3);
  var w=sm((u-.1)/.9);pA.lerp(pB,w);qA.slerp(qB,w);sA3.lerp(sB3,w);if(u>=.9995)R.matrix.copy(Bm);else R.matrix.compose(pA,qA,sA3);R.matrixWorldNeedsUpdate=true;rocketW.copy(pA);
- var fa=(u>.004&&u<.996)?Math.pow(Math.sin(PI*u),.55):0,fl=flag.flame;fl.visible=fa>.01;if(fl.visible){fl.scale.set(1,(.85+Math.sin(now/38)*.1+Math.sin(now/15)*.07)*(.5+fa*.9),1);fl.children.forEach(function(m){m.material.opacity=m.userData.o*fa;});}}
+ var fa=Math.max(arrFlame,(u>.004&&u<.996)?Math.pow(Math.sin(PI*u),.55):0),fl=flag.flame;fl.visible=fa>.01;if(fl.visible){fl.scale.set(1,(.85+Math.sin(now/38)*.1+Math.sin(now/15)*.07)*(.5+fa*.9),1);fl.children.forEach(function(m){m.material.opacity=m.userData.o*fa;});}}
 function render2(){ren.clear();ren.render(scene,cam);if(flag&&flag.R.visible)ren.render(sceneR,cam);}
 
 /* ---------- 五艘船：用原本的程式蓋，一個零件都不改，只決定怎麼飛 ---------- */
@@ -5667,7 +5672,7 @@ function shipTick(dt,now){var any=false;ships.forEach(function(s){if(s.state==='
 function scr(obj,off,out){tv.copy(off||ZERO).applyMatrix4(obj.matrixWorld).project(cam);out.x=(tv.x*.5+.5)*W;out.y=(.5-tv.y*.5)*H;out.z=tv.z;return out;}
 var ZERO=new T.Vector3(),sp2={x:0,y:0,z:0};
 function landFx(s){var I=isles[s.i];if(on>.5&&!document.body.dataset.modal){scr(s.h,null,sp2);C.burst(sp2.x,sp2.y,ST[s.i].k);C.beep(420+s.i*90,.14,'triangle');}I.lab.el.classList.add('hot');setTimeout(function(){I.lab.el.classList.remove('hot');},600);}
-var landed=false;function onLanded(){landed=true;if(!megaT)megaT=setTimeout(megaLoop,1800);setTimeout(askLook,1400);}
+var landed=false;function onLanded(){landed=true;if(!arrDone&&arrT<0){if(RM||scrollY>H*.05){arrDone=true;arrLift=0;}else arrT=0;}if(!megaT)megaT=setTimeout(megaLoop,1800);setTimeout(askLook,1400);}
 function askLook(){if(hasLook||wardOn||myName()==='我')return;var w=setInterval(function(){if(document.body.dataset.modal||document.body.classList.contains('in-station')||flying||voteOn)return;clearInterval(w);if(!hasLook&&on>.9)openWard($('#ibWard'));},400);}
 
 /* ---------- 太空人（展示版：全部是假的，自己走來走去） ---------- */
@@ -5676,12 +5681,14 @@ var CN=['小安','阿哲','Mia','凱文','小樂','阿凱','Emma','子晴','大�
 var shadowM=new T.InstancedMesh(new T.CircleGeometry(.16,10),new T.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false}),NA+3);shadowM.renderOrder=1;scene.add(shadowM);var sd=new T.Object3D();sd.rotation.x=-PI/2;
 function freeSpot(home,R,seed){for(var n=0;n<30;n++){var a=(seed==null?Math.random():hh(seed+n*1.7))*PI*2,r=Math.sqrt(seed==null?Math.random():hh(seed*3+n*2.3))*R,x=Math.cos(a)*r,z=Math.sin(a)*r,ok=true;home.obs.forEach(function(o){if(Math.hypot(x-o[0],z-o[1])<o[2]+.12)ok=false;});if(ok)return [x,z];}return [0,R*.6];}
 function mkAstro(name,look,home,opt){opt=opt||{};var g=K.build(look,opt),R=home.R||2.6,p=freeSpot(home,R,opt.seed);g.position.set(p[0],home.port?.085:.075,p[1]);g.rotation.order='YXZ';g.rotation.y=Math.random()*PI*2;g.scale.setScalar(opt.big||1);home.g.add(g);
- var A={g:g,name:name,home:home,R:R,tx:p[0],tz:p[1],wait:Math.random()*3,ph:Math.random()*6,mv:0,wave:0,sp:.34+Math.random()*.22,yaw:g.rotation.y,me:!!opt.me,tch:!!opt.teacher,still:!!opt.still,gy:g.position.y};
+ var A={bs:opt.big||1,g:g,name:name,home:home,R:R,tx:p[0],tz:p[1],wait:Math.random()*3,ph:Math.random()*6,mv:0,wave:0,sp:.34+Math.random()*.22,yaw:g.rotation.y,me:!!opt.me,tch:!!opt.teacher,still:!!opt.still,gy:g.position.y};
  A.lab=label('il who'+(opt.me?' me':'')+(opt.teacher?' tch':''),'<em></em><div class="bub"></div>',g,new T.Vector3(0,g.userData.top+.06,0));A.lab.el.firstChild.textContent=name;A.lab.el.onclick=function(e){e.stopPropagation();openChat(A);};astros.push(A);return A;}
 function astroTick(dt,t){var ch=cheer>.5;astros.forEach(function(A,k){var g=A.g;if(ch&&!RM){tv.copy(rocketW);A.home.g.worldToLocal(tv);var cy=Math.atan2(tv.x-g.position.x,tv.z-g.position.z),cd=cy-A.yaw;cd=Math.atan2(Math.sin(cd),Math.cos(cd));A.yaw+=cd*Math.min(1,dt*5);g.rotation.y=A.yaw;A.mv+=(0-A.mv)*Math.min(1,dt*8);}else if(!RM&&!A.still){if(A.wait>0){A.wait-=dt;A.mv+=(0-A.mv)*Math.min(1,dt*8);}else{var dx=A.tx-g.position.x,dz=A.tz-g.position.z,d=Math.hypot(dx,dz);if(d<.08){A.wait=1+Math.random()*4.5;var p=freeSpot(A.home,A.R);A.tx=p[0];A.tz=p[1];}else{var vx=dx/d,vz=dz/d,nx=g.position.x+vx*A.sp*dt,nz=g.position.z+vz*A.sp*dt;
      A.home.obs.forEach(function(o){var ex=nx-o[0],ez=nz-o[1],ed=Math.hypot(ex,ez),rr=o[2]+.1;if(ed<rr&&ed>1e-4){nx=o[0]+ex/ed*rr;nz=o[1]+ez/ed*rr;}});g.position.x=nx;g.position.z=nz;var ty=Math.atan2(vx,vz),dy=ty-A.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));A.yaw+=dy*Math.min(1,dt*6);g.rotation.y=A.yaw;A.mv+=(1-A.mv)*Math.min(1,dt*8);A.ph+=dt*A.sp*17;}}}
-  A.wave+=(((A.say>t||ch)?1:0)-A.wave)*Math.min(1,dt*7);g.rotation.x=-.2*cheer;g.position.y=A.gy+Math.abs(Math.sin(A.ph))*.035*A.mv;K.pose(g,A.ph,A.mv,A.wave,t+k);
-  g.getWorldPosition(tv);sd.position.set(tv.x,tv.y-(g.position.y-A.gy)+.012,tv.z);sd.scale.setScalar(g.visible?g.scale.x*(1-.25*A.mv*Math.abs(Math.sin(A.ph))):0);sd.updateMatrix();shadowM.setMatrixAt(k,sd.matrix);});shadowM.count=astros.length;shadowM.instanceMatrix.needsUpdate=true;}
+  A.wave+=(((A.say>t||ch)?1:0)-A.wave)*Math.min(1,dt*7);g.rotation.x=-.2*cheer;g.scale.setScalar(A.bs*(1+.75*cheer));g.position.y=A.gy+Math.abs(Math.sin(A.ph))*.035*A.mv+(RM?0:Math.abs(Math.sin(t*6.5+k*1.3))*.13*cheer);K.pose(g,A.ph,A.mv,A.wave,t+k);
+  g.getWorldPosition(tv);sd.position.set(tv.x,A.home.g.position.y+A.gy-.06,tv.z);sd.scale.setScalar(g.visible?g.scale.x*(1-.25*A.mv*Math.abs(Math.sin(A.ph))):0);sd.updateMatrix();shadowM.setMatrixAt(k,sd.matrix);});shadowM.count=astros.length;shadowM.instanceMatrix.needsUpdate=true;}
+var HELLO=['歡迎回來！','降落成功！','好帥！','停得真準','旗艦到了！','哇～'],BYE=['一路順風！','出發！','加油！','等你回來','衝啊！','拍下來拍下來'];
+function cheerSay(L){var c=astros.filter(function(a){return a.g.visible&&a.home===port;}).concat(astros.filter(function(a){return a.g.visible&&a.home!==port;}).slice(0,3));c.slice(0,7).forEach(function(A,k){setTimeout(function(){if(cheer>.3)say(A,L[k%L.length],2600);},120+k*230+Math.random()*120);});}
 var LINES=['第一站的作品交了！','這個指令好好用','我的網頁做出來了','誰可以幫我看一下流程圖？','原來用講的就可以','老師這招太神了','我把報價單做成網頁了','深度研究跑出 12 頁報告','剛剛那個再示範一次','我投你一票','Notebook 裝好資料了','下課一起研究','哇你的造型好帥','我的表格問出重點了','這一站我做完了','第二大腦開張','等等上台分享','我也想做這個','謝謝你教我','今天收穫好多'];
 var MEGA=[['Emma','第二站的網頁做出來了，大家來看！'],['Mia','誰有做報價單的指令？求分享'],['阿翔','我把每天的日報交給 AI 了，省 40 分鐘'],['大偉','第三站在這裡集合，一起做知識庫'],['阿倫','第一次做出流程圖，太有成就感了']];
 function say(A,txt,ms){var b=A.lab.el.lastChild;b.textContent=txt;b.classList.add('on');A.say=clock+(ms||3400)/1000;clearTimeout(A.st);A.st=setTimeout(function(){b.classList.remove('on');},ms||3400);}
@@ -5702,7 +5709,7 @@ var hud=el('div','islkeep','<div class="kick">AI 實戰課 ・ MISSION CONTROL</
  '<div class="islbar"><button class="ibtn pri" id="ibGo">從第一站出發</button><button class="ibtn" id="ibWard">'+ICON.shirt+'換造型</button><button class="ibtn" id="ibMega">'+ICON.mega+'大聲公</button><button class="ibtn" id="ibPlay">'+ICON.play+'重播降落</button><button class="ibtn" id="ibName" aria-pressed="'+(small||W<760?'false':'true')+'">'+ICON.tag+'名牌</button><button class="ibtn" id="ibLive" aria-pressed="true">'+ICON.live+'熱鬧</button></div>'+
  '<p class="hint" id="islhint"></p>');hud.id='islhud';hero.appendChild(hud);
 var fly=el('section',null,'<div class="flycap"><div class="kick">LIFT OFF ・ 升空</div><h2>旗艦離開母港，<br>帶你看它裡面<em>裝了什麼</em></h2></div>');fly.id='islfly';hero.parentNode.insertBefore(fly,hero.nextSibling);
-var down=el('button','islkeep','<span>往下 ・ 旗艦升空</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');down.id='isldown';down.type='button';hero.appendChild(down);down.onclick=function(){window.scrollTo({top:H*1.3,left:0,behavior:RM?'auto':'smooth'});};
+var down=el('button','islkeep','<span>往下 ・ 旗艦升空</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');down.id='isldown';down.type='button';document.body.appendChild(down);down.onclick=function(){window.scrollTo({top:H*1.3,left:0,behavior:RM?'auto':'smooth'});};
 var fpsEl=null;if(/[?&]fps\b/.test(location.search)){fpsEl=el('div');fpsEl.id='islfps';document.body.appendChild(fpsEl);}
 var demo=el('div',null,'展示版');demo.id='isldemo';if(!window.ISL_PROD)document.body.appendChild(demo);
 var megaBox=el('div');megaBox.id='islmega';document.body.appendChild(megaBox);
@@ -5786,7 +5793,7 @@ var is2={x:0,y:0,z:0};
 function isleAt(x,y){var best=-1,bd=1e9;isles.forEach(function(I){scr(I.g,null,is2);if(is2.z>1)return;var cx=is2.x,cy=is2.y;scr(I.g,tv2.set(IR,0,0).applyQuaternion(cam.quaternion),sp2);var r=Math.abs(sp2.x-cx),sq=Math.max(.28,Math.abs(Math.sin(pit))),dx=(x-cx)/r,dy=(y-cy)/(r*sq+r*.12),d=dx*dx+dy*dy;if(d<1&&d<bd){bd=d;best=I.i;}});return best;}
 function astroAt(x,y){var best=null,rr=ptype==='mouse'?26:34,bd=rr*rr;astros.forEach(function(A){if(!A.g.visible)return;scr(A.g,tv2.set(0,.35,0),sp2);if(sp2.z>1)return;var d=(sp2.x-x)*(sp2.x-x)+(sp2.y-y)*(sp2.y-y);if(d<bd){bd=d;best=A;}});return best;}
 /* 名牌不接手指（不然手指剛好落在名牌上，整個手勢就失效）；改成由這裡判斷點到哪一張 */
-function labelAt(x,y){var best=null,ba=1e9;if(labs.style.opacity==='0')return null;for(var i=0;i<LB.length;i++){var e=LB[i].el;if(!e.onclick||e.style.visibility==='hidden'||e.style.display==='none')continue;var c=e.firstElementChild;if(!c)continue;var r=c.getBoundingClientRect();if(!r.width||x<r.left-4||x>r.right+4||y<r.top-4||y>r.bottom+4)continue;var ar=r.width*r.height;if(ar<ba){ba=ar;best=LB[i];}}return best;}
+function labelAt(x,y){var best=null,ba=1e9;if(uS>.05)return null;for(var i=0;i<LB.length;i++){var e=LB[i].el;if(!e.onclick||e.style.visibility==='hidden'||e.style.display==='none')continue;var c=e.firstElementChild;if(!c)continue;var r=c.getBoundingClientRect();if(!r.width||x<r.left-4||x>r.right+4||y<r.top-4||y>r.bottom+4)continue;var ar=r.width*r.height;if(ar<ba){ba=ar;best=LB[i];}}return best;}
 var hotL=null;function hover(x,y){var L=labelAt(x,y);if(L!==hotL){if(hotL)hotL.el.classList.remove('hot');hotL=L;if(L)L.el.classList.add('hot');}var a=L?null:astroAt(x,y);hoverI=(L||a)?-1:isleAt(x,y);zone.classList.toggle('pt',!!L||!!a||hoverI>=0);}
 /* 點一下：同學→聊天。島：滑鼠直接進站；手指第一下先貼近看，貼近之後再點一下才進站（不用等雙擊，單擊不會變慢）。點空白處回全景。 */
 function tap(x,y,pt){if(megaCard.classList.contains('on')||chatCard.classList.contains('on')){closeCards();return;}var L=labelAt(x,y);if(L){L.el.onclick({clientX:x,clientY:y,stopPropagation:function(){}});return;}var a=(pt==='mouse'||zf<=.62)?astroAt(x,y):null;if(a){openChat(a);return;}var i=isleAt(x,y);
@@ -5822,15 +5829,15 @@ addEventListener('keydown',function(e){if(wardOn){if(e.key==='Escape')closeWard(
 function wardTick(dt){if(!wardOn||!W3)return;var c=W3.cv,w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;if(w!==W3.w||h!==W3.h){W3.w=w;W3.h=h;W3.r.setSize(w,h,false);W3.c.aspect=w/h;W3.c.position.set(0,.66,w/h<.62?2.7:2.05);W3.c.lookAt(0,.42,0);W3.c.updateProjectionMatrix();}
  if(!wdrag){wyaw+=wv*dt;wv*=Math.exp(-dt*3.5);if(Math.abs(wv)<.05&&!RM)wyaw+=dt*.35;}wpop+=(0-wpop)*Math.min(1,dt*9);W3.piv.rotation.y=wyaw;W3.piv.scale.setScalar(1+wpop*.09);if(W3.fig)K.pose(W3.fig,clock*5,RM?0:.55,0,clock);W3.r.render(W3.s,W3.c);}
 function remakeMe(){if(me){var i=astros.indexOf(me);if(i>=0)astros.splice(i,1);var j=LB.indexOf(me.lab);if(j>=0)LB.splice(j,1);me.lab.el.remove();me.home.g.remove(me.g);K.dispose(me.g);}
- var home=isles[4];me=mkAstro(myName(),look,home,{me:true,big:1.12});me.g.position.set(home.ox*.2-home.oz*1.9,.075,home.oz*.2+home.ox*1.9);me.tx=me.g.position.x;me.tz=me.g.position.z;}
+ me=mkAstro(myName(),look,port,{me:true,big:1.12});me.g.position.set(.25,.085,2.1);me.tx=me.g.position.x;me.tz=me.g.position.z;me.yaw=me.g.rotation.y=0;}
 
 /* ---------- 把人放上島 ---------- */
-(function(){for(var n=0;n<NA;n++){var I=isles[n%5];mkAstro(CN[n],K.randomLook(n+2.5),I,{seed:n*4.1+1});}
+(function(){for(var n=0;n<NA;n++){var I=n<4?port:isles[n%5];mkAstro(CN[n],K.randomLook(n+2.5),I,{seed:n*4.1+1});}
  mkAstro('柏翰老師',K.fixLook({zone:'m',style:'royal',body:'std',helm:'round',hair:'none',visor:1,suit:7,trim:0,acc:'cape'}),port,{teacher:true,big:1.25,seed:3});remakeMe();})();
 
 /* ---------- 尺寸 ---------- */
 var dist=27,portrait=false,fovA=36,offX=0,offY=0,sized=false;
-function size(){W=innerWidth;H=innerHeight;portrait=W/H<.85;ren.setSize(W,H,false);cam.aspect=W/H;fovA=portrait?44:36;var half=Math.tan(fovA*PI/360),ox=portrait?0:Math.min(.14,Math.max(.04,(W-800)/3200));dist=Math.max(30,(RING+IR+1.6)/(half*cam.aspect*(1-ox*2.1)));offX=-W*ox;offY=portrait?H*.13:H*.05;if(!sized){sized=true;pit=portrait?.84:.56;}var zb=(portrait||small)?Math.round(hud.getBoundingClientRect().height+H*.07):0;zone.style.bottom=zb?zb+'px':'';down.style.bottom=zb?(zb+6)+'px':'';}
+function size(){W=innerWidth;H=innerHeight;portrait=W/H<.85;ren.setSize(W,H,false);cam.aspect=W/H;fovA=portrait?44:36;var half=Math.tan(fovA*PI/360),ox=portrait?0:Math.min(.14,Math.max(.04,(W-800)/3200));dist=Math.max(30,(RING+IR+1.6)/(half*cam.aspect*(1-ox*2.1)));offX=-W*ox;offY=portrait?H*.13:H*.05;if(!sized){sized=true;pit=portrait?.84:.56;}var zb=(portrait||small)?Math.round(hud.getBoundingClientRect().height+H*.07):0;zone.style.bottom=zb?zb+'px':'';}
 addEventListener('resize',size);size();
 
 /* ---------- 主迴圈 ---------- */
@@ -5847,22 +5854,25 @@ function frame(now){requestAnimationFrame(frame);var rdt=Math.min((now-last)/100
  if(stt==='handA'){stt='orig';b.classList.remove('islfull');if(flag)flag.R.visible=false;froz=false;}
  else if(stt==='orig'&&uT<.99&&origClosed()&&!st){stt='mine';if(flag)flag.R.visible=true;b.classList.add('islfull');window.__ISL_ON=true;froz=false;uS=1;}
  if(stt==='mine'){if(RM)uS=uT;else{uS+=(uT-uS)*Math.min(1,dt*6.5);if(Math.abs(uT-uS)<.0006)uS=uT;uS=Math.max(uS,Math.min(1,(sY-H*1.3)/(H*.2)));}}else uS=1;
- on=1-uS;cheer+=((uS>.03&&uS<.999?1:0)-cheer)*Math.min(1,dt*6);
+ on=1-uS;var cheerU=uS>.03&&uS<.6,cheerNow=cheerU||cheerA;cheer+=((cheerNow?1:0)-cheer)*Math.min(1,dt*6);
+ if(cheerNow&&!cheerWas&&!md&&!wardOn)cheerSay(cheerA?HELLO:BYE);cheerWas=cheerNow;
  var show=!st&&!document.hidden,rsE=$('#routeSec'),op=show?1-.62*sm((sY-(rsE.offsetTop-H*1.3))/H):0;cv.style.opacity=op.toFixed(3);
- var hide=uS>.05?'0':'1';if(labs.style.opacity!==hide){labs.style.opacity=hide;megaBox.style.opacity=hide;labs.style.visibility=megaBox.style.visibility=uS>.3?'hidden':'';}zone.style.pointerEvents=(uS>.02&&!dragging&&np===0)?'none':'';var ho=(1-sm(uS/.22)).toFixed(2);if(hud.style.opacity!==ho){hud.style.opacity=ho;hud.style.visibility=ho==='0.00'?'hidden':'';}
+ var hide=uS>.34?'0':'1';if(labs.style.opacity!==hide){labs.style.opacity=hide;labs.style.visibility=uS>.34?'hidden':'';}var mh=uS>.05?'0':'1';if(megaBox.style.opacity!==mh){megaBox.style.opacity=mh;b.classList.toggle('islgo',uS>.05);}zone.style.pointerEvents=(uS>.02&&!dragging&&np===0)?'none':'';var dv=(uS<.03&&!st&&!md&&!wardOn);if(down._v!==dv){down._v=dv;down.classList.toggle('off',!dv);}var ho=(1-sm(uS/.22)).toFixed(2);if(hud.style.opacity!==ho){hud.style.opacity=ho;hud.style.visibility=ho==='0.00'?'hidden':'';}
  voteOn=!!(md==='vote'||(window.ARENA&&window.ARENA._vs&&window.ARENA._vs.round));if(voteOn&&wardOn)closeWard(true);var wantLive=live&&!voteOn;if(wantLive!==liveEff)applyLive(wantLive);
  if(!show||(wardOn&&innerWidth<=760))return;
  if(stt==='orig'&&froz)return;
  var frozen=!!md;if(frozen&&(fzN++%15))return;
  /* 視角：平常繞著島轉；升空時鏡頭跟著火箭往上，最後對到原本首頁的鏡頭 */
  viewTick(dt);
- var k=sm(uS),ppA=clampSoft(pit,P0,P1,.5),pp=ppA+(.2-ppA)*k,zE=clampSoft(zf,ZMIN,ZMAX,.4),d=dist*DBG.f*(zE+(1-zE)*k),ty=foc.y+(11-foc.y)*k,fx=foc.x*(1-k),fz=foc.z*(1-k);
+ /* 鏡頭貼近母港停一拍：火箭降落時一次，點火升空時一次（跟著捲動走，可以倒回去） */
+ var cU=RM?0:sm(uS/.06)*(1-sm((uS-.14)/.2)),cc=Math.max(cArr,cU),dC=portrait?17:13.5;
+ var k=sm(uS),ppA=clampSoft(pit,P0,P1,.5);ppA+=(.42-ppA)*cc;var pp=ppA+(.2-ppA)*k,zE=clampSoft(zf,ZMIN,ZMAX,.4),dA=dist*zE;dA+=(dC-dA)*cc;var d=DBG.f*(dA+(dist-dA)*k),fyA=foc.y+(2.3-foc.y)*cc,ty=fyA+(11-fyA)*k,fx=foc.x*(1-cc)*(1-k),fz=foc.z*(1-cc)*(1-k);
  cam.fov=fovA+(42-fovA)*k;if(k<.9995)cam.setViewOffset(W,H,offX*(1-k),offY*(1-k),W,H);else cam.clearViewOffset();cam.updateProjectionMatrix();
  var shk=(!RM&&uS>.01&&uS<.32)?.05*Math.sin(PI*uS/.32):0;
  tgt.set(fx+DBG.x+Math.sin(now*.083)*shk,ty+DBG.y+Math.cos(now*.117)*shk,fz+DBG.z);cam.position.set(tgt.x+Math.sin(yaw)*Math.cos(pp)*d,tgt.y+Math.sin(pp)*d,tgt.z+Math.cos(yaw)*Math.cos(pp)*d);cam.lookAt(tgt);cam.updateMatrixWorld();lrig.quaternion.copy(cam.quaternion);
  /* 升空時島慢慢變暗、退到下面 */
  hemiL.intensity=.6*(1-.45*k);sunL.intensity=1.35*(1-.55*k);fillL.intensity=.5*(1-.4*k);scene.fog.near=k<.004?200:70-52*k;scene.fog.far=k<.004?400:190-118*k;
- var ig=uS<.5?Math.sin(PI*Math.min(1,uS/.5)):0;port.glow.material.opacity=ig*.9;port.rim.material.opacity=.5+ig*.5;
+ var ig=Math.max(arrFlame,uS<.5?Math.sin(PI*Math.min(1,uS/.5)):0);port.glow.material.opacity=ig*.9;port.rim.material.opacity=.5+ig*.5;
  rocketTick(uS,now);
  if(!ign&&uS>.045&&uT>uS&&!RM&&!md&&!wardOn){ign=true;scr(port.g,tv2.set(0,1,0),sp2);C.burst(sp2.x,sp2.y,'#FFB060');C.beep(110,.5,'sawtooth',.05);C.beep(70,.7,'triangle',.06);}if(uS<.01)ign=false;
  if(frozen||wardOn){scene.updateMatrixWorld();render2();return;}
@@ -5870,10 +5880,15 @@ function frame(now){requestAnimationFrame(frame);var rdt=Math.min((now-last)/100
  var t=clock;isles.forEach(function(I,q){if(!RM)I.g.position.y=I.by+Math.sin(t*.55+q*1.7)*.07;I.lit+=(I.litT-I.lit)*Math.min(1,dt*3);I.hot+=((hoverI===q&&uS<.02?1:0)-I.hot)*Math.min(1,dt*10);var p=.5+.5*Math.sin(t*1.6+q);I.rim.material.opacity=.2+I.lit*(.5+.2*p)+I.hot*.3;I.halo.material.opacity=I.lit*.2+I.hot*.14;I.ring.material.opacity=.3+I.lit*.5*p;I.g.scale.setScalar(1+I.hot*.025);});
  if(!RM){spin.forEach(function(q){if(q[3]==='z')q[0].rotation.z+=dt*q[1];else if(q[2])q[0].rotation.y=Math.sin(t*q[1])*q[2];else q[0].rotation.y+=dt*q[1];});planets.forEach(function(p){p.children[0].rotation.y+=dt*p.userData.sp;});bg.rotation.y=t*.0025;}
  beads.forEach(function(q,i){q.cu.getPoint((q.o+t*q.sp)%1,bd0.position);bd0.updateMatrix();beadM.setMatrixAt(i,bd0.matrix);});beadM.instanceMatrix.needsUpdate=true;
+ /* 開場降落：火箭一定會降完；鏡頭貼近那一拍只要使用者一碰畫面或開始捲動就讓開（可打斷） */
+ var cTgt=0;if(arrT>=0&&!arrDone){arrT+=dt;var ae=Math.min(1,arrT/3.6),ee=1-Math.pow(1-ae,3);arrLift=60*(1-ee);arrFlame=ae<1?Math.min(1,.35+ae)*(1-sm((ae-.9)/.1)):0;if(np>0||dragging||uS>.02||md||wardOn||st)arrCut=true;
+   if(!arrCut)cTgt=sm((arrT-.6)/1.3)*(1-sm((arrT-5.2)/1.1));cheerA=!arrCut&&arrT>1.6&&arrT<5.4;
+   if(ae>=1&&!arrHit){arrHit=true;scr(port.g,tv2.set(0,.8,0),sp2);C.burst(sp2.x,sp2.y,'#FFD400');C.beep(180,.25,'triangle',.06);C.beep(360,.18,'triangle',.04);}if(arrT>6.4){arrDone=true;arrLift=0;arrFlame=0;cheerA=false;}}
+ cArr=arrCut?cArr+(0-cArr)*Math.min(1,dt*7):cTgt;
  shipTick(dt,now);astroTick(dt,t);chatTick(dt);playLabel();
  scene.updateMatrixWorld();
  /* 名牌跟著走 */
- if(uS<=.3)for(var i=0;i<LB.length;i++){var L=LB[i];scr(L.obj,L.off,lv);if(lv.z>1){L.el.style.visibility='hidden';continue;}L.el.style.visibility='';L.el.style.transform='translate('+lv.x.toFixed(1)+'px,'+lv.y.toFixed(1)+'px)';}
+ if(uS<=.36)for(var i=0;i<LB.length;i++){var L=LB[i];scr(L.obj,L.off,lv);if(lv.z>1){L.el.style.visibility='hidden';continue;}L.el.style.visibility='';L.el.style.transform='translate('+lv.x.toFixed(1)+'px,'+lv.y.toFixed(1)+'px)';}
  render2();
  /* 交接：兩支火箭已經完全重疊，下一格換成原本那支繼續拆（島的畫面停在這一格，省效能） */
  if(stt==='orig')froz=true;
