@@ -5253,7 +5253,7 @@ body.islfull canvas#gl{visibility:hidden}
 body.isl #orbs,body.isl #wm{transition:opacity .9s ease}body.islfull #orbs,body.islfull #wm{opacity:0!important}
 body.isl .hero>*:not(.islkeep){display:none}
 body.isl .hero{justify-content:flex-end;padding-bottom:6svh}
-#islzone{position:absolute;inset:0;touch-action:pan-y;cursor:grab;display:block!important}
+#islzone{position:absolute;inset:0;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;cursor:grab;display:block!important}
 #islzone.drag{cursor:grabbing}#islzone.pt{cursor:pointer}
 #islhud{position:relative;z-index:2;pointer-events:none;max-width:22rem;display:block!important}
 #islhud>*{pointer-events:auto}
@@ -5275,17 +5275,17 @@ body.in-station #isldemo,body[data-modal] #isldemo{opacity:.5}
 body.in-station #isllabs,body[data-modal] #isllabs,body.voteonly #isllabs,body.voteonly #isl,body.voteonly #isldemo,body.voteonly #islmega{display:none}
 .il{position:absolute;left:0;top:0;will-change:transform;white-space:nowrap;font-family:system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif}
 .il>b,.il>span,.il>em{display:block;transform:translate(-50%,-100%)}
-.il.isle{pointer-events:auto;cursor:pointer}
+.il.isle{pointer-events:none}
 .il.isle>b{display:flex;align-items:center;gap:.45rem;background:rgba(253,253,255,.96);color:#0b1020;font-weight:800;font-size:.8rem;padding:.42rem .8rem .42rem .5rem;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:transform .12s ease-out}
 .il.isle>b i{font-style:normal;font-size:.66rem;font-weight:900;color:#fff;background:var(--k);border-radius:999px;padding:.2rem .42rem;letter-spacing:.04em}
-.il.isle:hover>b,.il.isle.hot>b{transform:translate(-50%,-100%) scale(1.08)}
+.il.isle.hot>b{transform:translate(-50%,-100%) scale(1.08)}
 .il.isle:active>b{transform:translate(-50%,-100%) scale(.97)}
 .il.isle>b u{text-decoration:none;font-size:.66rem;font-weight:700;color:#5b6486}
-.il.oc{pointer-events:auto;cursor:pointer}
+.il.oc{pointer-events:none}
 .il.oc>span{background:rgba(2,7,10,.72);border:1px solid rgba(255,255,255,.22);color:#eef1ff;font-size:.66rem;font-weight:700;padding:.26rem .55rem;border-radius:999px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .12s ease-out,border-color .15s}
 .il.oc>span:before{content:"";display:inline-block;width:.38rem;height:.38rem;border-radius:50%;background:var(--k);margin-right:.35rem;vertical-align:.05em}
-.il.oc:hover>span{transform:translate(-50%,-100%) scale(1.08);border-color:var(--k)}
-.il.who{pointer-events:auto;cursor:pointer}
+.il.oc.hot>span{transform:translate(-50%,-100%) scale(1.08);border-color:var(--k)}
+.il.who{pointer-events:none}
 .il.who>em{font-style:normal;font-size:.62rem;font-weight:700;color:#eef1ff;background:rgba(2,7,10,.6);padding:.16rem .42rem;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
 .il.who.me>em{background:var(--ia);color:#02070A;border-color:transparent;font-weight:900}
 .il.who.tch>em{background:#FFD400;color:#02070A;border-color:transparent;font-weight:900}
@@ -5363,6 +5363,13 @@ body.isl canvas#isl{transition:none}body.islrmfade canvas#isl,body.islrmfade can
 @media (prefers-reduced-motion:reduce){canvas#isl,body.isl canvas#gl{transition:opacity .2s ease}}
 body.isl .hero:before{display:none}#islhud h1,#islhud .lead,#islhud .kick,#islhud .hint,#islfly h2,#islfly .kick{text-shadow:0 2px 18px rgba(2,7,10,.9),0 0 2px rgba(2,7,10,.8)}
 body.islward #isllabs,body.islward #islmega{display:none}#wardopt{overscroll-behavior:contain}#ward{overscroll-behavior:contain}
+#isldown{position:absolute;left:50%;bottom:1.1rem;transform:translateX(-50%);z-index:3;display:inline-flex!important;align-items:center;gap:.35rem;appearance:none;border:1px solid rgba(255,255,255,.22);background:rgba(2,7,10,.6);color:#eef1ff;font:700 .78rem/1 system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:.6rem .9rem;border-radius:999px;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .1s ease-out,opacity .2s}
+#isldown:active{transform:translateX(-50%) scale(.96)}#isldown svg{width:.95rem;height:.95rem;animation:isldn 1.8s ease-in-out infinite}
+@keyframes isldn{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+@media (min-width:860px){#isldown{left:auto;right:6vw;transform:none}#isldown:active{transform:scale(.96)}}
+@media (prefers-reduced-motion:reduce){#isldown svg{animation:none}}
+#islfps{position:fixed;left:.6rem;top:4rem;z-index:90;font:700 .72rem/1.2 ui-monospace,Menlo,monospace;color:#B6F500;background:rgba(0,0,0,.72);padding:.4rem .55rem;border-radius:.5rem;pointer-events:none}
+.il.who.hot>em{border-color:#fff}
 
 </style>
 <script>
@@ -5693,10 +5700,13 @@ document.body.classList.add('isl','islfull');window.__ISL_ON=true;if(small||W<76
 var zone=el('div','islkeep');zone.id='islzone';hero.insertBefore(zone,hero.firstChild);
 var hud=el('div','islkeep','<div class="kick">AI 實戰課 ・ MISSION CONTROL</div><h1>把 AI 編成<br>你的<em>艦隊</em></h1><p class="lead">五座島就是五個階段。每一艘船降落在自己的島上，同學都在島上走動、聊天。點一座島，進那一站。</p>'+
  '<div class="islbar"><button class="ibtn pri" id="ibGo">從第一站出發</button><button class="ibtn" id="ibWard">'+ICON.shirt+'換造型</button><button class="ibtn" id="ibMega">'+ICON.mega+'大聲公</button><button class="ibtn" id="ibPlay">'+ICON.play+'重播降落</button><button class="ibtn" id="ibName" aria-pressed="'+(small||W<760?'false':'true')+'">'+ICON.tag+'名牌</button><button class="ibtn" id="ibLive" aria-pressed="true">'+ICON.live+'熱鬧</button></div>'+
- '<p class="hint">拖曳可以轉視角 ・ 點同學可以聊天 ・ 往下捲，旗艦升空</p>');hud.id='islhud';hero.appendChild(hud);
+ '<p class="hint" id="islhint"></p>');hud.id='islhud';hero.appendChild(hud);
 var fly=el('section',null,'<div class="flycap"><div class="kick">LIFT OFF ・ 升空</div><h2>旗艦離開母港，<br>帶你看它裡面<em>裝了什麼</em></h2></div>');fly.id='islfly';hero.parentNode.insertBefore(fly,hero.nextSibling);
+var down=el('button','islkeep','<span>往下 ・ 旗艦升空</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');down.id='isldown';down.type='button';hero.appendChild(down);down.onclick=function(){window.scrollTo({top:H*1.3,left:0,behavior:RM?'auto':'smooth'});};
+var fpsEl=null;if(/[?&]fps\b/.test(location.search)){fpsEl=el('div');fpsEl.id='islfps';document.body.appendChild(fpsEl);}
 var demo=el('div',null,'展示版');demo.id='isldemo';if(!window.ISL_PROD)document.body.appendChild(demo);
 var megaBox=el('div');megaBox.id='islmega';document.body.appendChild(megaBox);
+$('#islhint').textContent=matchMedia('(pointer:coarse)').matches?'單指拖：轉視角 ・ 雙指：縮放、旋轉、傾斜 ・ 點島：貼近看':'拖曳轉視角 ・ 觸控板捏合縮放 ・ 點島進站 ・ 往下捲，旗艦升空';
 $('#ibName').onclick=function(){var v=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',v);document.body.classList.toggle('nonames',!v);C.beep(500,.06);};
 var playTxt=ICON.play+'重播降落';$('#ibPlay').onclick=function(){if(flying){ships.forEach(function(s){if(s.state==='fly')park(s);});return;}if(RM){C.toast('已開啟「減少動態」，船直接停在島上');return;}launchAll();C.beep(300,.1);};
 function playLabel(){var b=$('#ibPlay'),f=flying?'1':'';if(b.dataset.f!==f){b.dataset.f=f;b.innerHTML=flying?(ICON.play+'跳過降落'):playTxt;}}
@@ -5724,18 +5734,65 @@ function openChat(A){if(A.me){openWard($('#ibWard'));return;}if(A.tch)return;clo
 function sendChat(v){v=(v||chatCard.querySelector('input').value).trim();if(!v||!chatWith)return;chatCard.querySelector('input').value='';var lg=chatCard.querySelector('.log'),d=el('div','me');d.textContent=v;lg.appendChild(d);lg.scrollTop=1e5;if(me)say(me,v,3000);var A=chatWith;setTimeout(function(){if(chatWith!==A)return;var r=A.tch?'收到，等一下過去找你':REPLY[Math.floor(Math.random()*REPLY.length)],e=el('div');e.textContent=r;lg.appendChild(e);lg.scrollTop=1e5;say(A,r,3200);},1100);}
 chatCard.querySelector('.x').onclick=closeCards;chatCard.querySelector('.ibtn').onclick=function(){sendChat();};chatCard.querySelector('input').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();e.stopPropagation();});
 
-/* ---------- 視角：拖曳 1:1 跟手，放開帶慣性，上下有橡皮筋 ---------- */
-var yaw=0,pit=.56,vyaw=0,P0=.32,P1=.95,dragging=false,dpx=0,dpy=0,moved=0,hist=[],lastX=0,lastY=0,hoverI=-1,tgt=new T.Vector3(0,1.4,0);
+/* ---------- 視角：多點觸控（照 Apple 地圖的手勢）----------
+   單指拖＝轉視角（左右、上下都 1:1 跟手）；雙指捏合＝縮放（以兩指中間為中心）；雙指轉＝水平旋轉；雙指一起上下＝傾斜。
+   放開帶慣性；到極限有橡皮筋。手機上單指往上拖到底，會接著捲頁面（火箭升空）。 */
+var yaw=0,pit=.56,vyaw=0,vpit=0,P0=-.6,P1=1.48,PONE=-.2,zf=1,ZMIN=.3,ZMAX=1.15,foc=new T.Vector3(0,1.4,0),FOC0=new T.Vector3(0,1.4,0),fly=null,focI=-1;
+var dragging=false,moved=0,hist=[],lastX=0,lastY=0,hoverI=-1,tgt=new T.Vector3(0,1.4,0),pts={},np=0,pinch=null,ptype='mouse',scrollV=0,chained=false,KY=.0052,KP=.005;
 function rubber(o,dim){return o*dim*.55/(dim+.55*Math.abs(o));}
-zone.addEventListener('pointerdown',function(e){if(e.button)return;dragging=true;moved=0;dpx=lastX=e.clientX;dpy=lastY=e.clientY;vyaw=0;hist=[[performance.now(),e.clientX]];try{zone.setPointerCapture(e.pointerId);}catch(x){}zone.classList.add('drag');});
-zone.addEventListener('pointermove',function(e){if(!dragging){if(e.pointerType==='mouse')hover(e.clientX,e.clientY);return;}var dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);if(moved<6)return;yaw-=dx*.0052;if(e.pointerType==='mouse')pit+=dy*.0032;hist.push([performance.now(),e.clientX]);if(hist.length>6)hist.shift();});
-function endDrag(e){if(!dragging)return;dragging=false;zone.classList.remove('drag');try{zone.releasePointerCapture(e.pointerId);}catch(x){}if(moved<6){if(e.type==='pointerup')tap(e.clientX,e.clientY);return;}var a=hist[0],b=hist[hist.length-1],dtm=b[0]-a[0];if(dtm>8&&performance.now()-b[0]<90)vyaw=-(b[1]-a[1])/dtm*1000*.0052;}
-zone.addEventListener('pointerup',endDrag);zone.addEventListener('pointercancel',endDrag);zone.addEventListener('pointerleave',function(){hoverI=-1;zone.classList.remove('pt');});
+function clampSoft(v,a,b,dim){return v<a?a+rubber(v-a,dim):v>b?b+rubber(v-b,dim):v;}
+function worldAt(x,y,out){tv3.set(x/W*2-1,-(y/H*2-1),.5).unproject(cam).sub(cam.position);if(Math.abs(tv3.y)<1e-4)return null;var t=(foc.y-cam.position.y)/tv3.y;if(!(t>0)||t>300)return null;out.copy(cam.position).addScaledVector(tv3,t);return Math.hypot(out.x,out.z)>16?null:out;}
+function two(){var k=Object.keys(pts),a=pts[k[0]],b=pts[k[1]];return {cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,d:Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),a:Math.atan2(b.y-a.y,b.x-a.x)};}
+function flyTo(z,p,i){fly={z:z,p:p.clone()};focI=i==null?-1:i;vyaw=vpit=0;}
+function scrollNow(dy){if(!dy)return;try{window.scrollBy({top:dy,left:0,behavior:'instant'});}catch(e){window.scrollBy(0,dy);}}
+zone.addEventListener('pointerdown',function(e){if(e.pointerType==='mouse'&&e.button)return;ptype=e.pointerType;pts[e.pointerId]={x:e.clientX,y:e.clientY};np=Object.keys(pts).length;try{zone.setPointerCapture(e.pointerId);}catch(x){}
+ fly=null;scrollV=0;vyaw=vpit=0;
+ if(np===1){dragging=true;moved=0;chained=false;lastX=e.clientX;lastY=e.clientY;hist=[[performance.now(),yaw,pit,scrollY]];zone.classList.add('drag');}
+ else if(np===2){pinch=two();moved=99;}});
+zone.addEventListener('pointermove',function(e){var p=pts[e.pointerId];if(!p){if(e.pointerType==='mouse')hover(e.clientX,e.clientY);return;}p.x=e.clientX;p.y=e.clientY;
+ if(np>=2){var q=two(),o=pinch;if(!o){pinch=q;return;}
+  /* 捏合：以兩指中間那一點為中心縮放 */
+  var nz=zf*(o.d/q.d),a0=worldAt(q.cx,q.cy,tv2),f=nz/zf;if(a0&&nz>ZMIN*.7&&nz<ZMAX*1.2){foc.x=a0.x+(foc.x-a0.x)*f;foc.z=a0.z+(foc.z-a0.z)*f;}zf=Math.max(ZMIN*.7,Math.min(ZMAX*1.2,nz));
+  var da=q.a-o.a;da=Math.atan2(Math.sin(da),Math.cos(da));yaw+=da;yaw-=(q.cx-o.cx)*KY;pit+=(q.cy-o.cy)*KP;pinch=q;focI=-1;return;}
+ if(!dragging)return;var dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);if(moved<8)return;
+ yaw-=dx*KY;
+ if(ptype==='mouse')pit+=dy*KP;
+ else if(scrollY>.5){scrollNow(-dy);chained=true;}
+ else{var want=pit+dy*KP;if(want<PONE&&dy<0){var ex=(PONE-want)/KP;pit=PONE;scrollNow(ex);chained=true;}else pit=want;}
+ hist.push([performance.now(),yaw,pit,scrollY]);if(hist.length>7)hist.shift();});
+function endPtr(e){if(!pts[e.pointerId])return;delete pts[e.pointerId];np=Object.keys(pts).length;try{zone.releasePointerCapture(e.pointerId);}catch(x){}
+ if(np>=2){pinch=two();return;}
+ if(np===1){/* 放掉一指：剩下那一指接手，畫面不跳 */pinch=null;var k=Object.keys(pts)[0];lastX=pts[k].x;lastY=pts[k].y;dragging=true;moved=99;hist=[[performance.now(),yaw,pit,scrollY]];return;}
+ pinch=null;if(!dragging)return;dragging=false;zone.classList.remove('drag');
+ if(moved<8){if(e.type==='pointerup')tap(e.clientX,e.clientY,e.pointerType);return;}
+ var a=hist[0],b=hist[hist.length-1],dtm=(b[0]-a[0])/1000;if(dtm>.012&&performance.now()-b[0]<90){vyaw=(b[1]-a[1])/dtm;vpit=(b[2]-a[2])/dtm;if(chained){scrollV=(b[3]-a[3])/dtm;vpit=0;}}}
+zone.addEventListener('pointerup',endPtr);zone.addEventListener('pointercancel',endPtr);zone.addEventListener('pointerleave',function(e){if(e.pointerType==='mouse'){hoverI=-1;zone.classList.remove('pt');if(hotL){hotL.el.classList.remove('hot');hotL=null;}}});
+/* 電腦：觸控板捏合（或 Ctrl＋滾輪）縮放；一般滾輪照常捲頁 */
+zone.addEventListener('wheel',function(e){if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();fly=null;var nz=Math.max(ZMIN,Math.min(ZMAX,zf*Math.exp(e.deltaY*.012))),a0=worldAt(e.clientX,e.clientY,tv2),f=nz/zf;if(a0){foc.x=a0.x+(foc.x-a0.x)*f;foc.z=a0.z+(foc.z-a0.z)*f;}zf=nz;},{passive:false});
+var gs0=1,gr0=0;zone.addEventListener('gesturestart',function(e){e.preventDefault();gs0=e.scale;gr0=e.rotation;fly=null;});zone.addEventListener('gesturechange',function(e){e.preventDefault();zf=Math.max(ZMIN,Math.min(ZMAX,zf*gs0/e.scale));gs0=e.scale;yaw+=(e.rotation-gr0)*PI/180;gr0=e.rotation;});
+/* 沒有手指在上面的時候：慣性、橡皮筋彈回、飛到指定的島 */
+function viewTick(dt){var touching=dragging||np>0;
+ if(scrollV){if(touching||Math.abs(scrollV)<25)scrollV=0;else{scrollNow(scrollV*dt);scrollV*=Math.exp(-dt*3.2);if(scrollY<=0&&scrollV<0)scrollV=0;}}
+ if(touching)return;
+ yaw+=vyaw*dt;pit+=vpit*dt;var dec=Math.exp(-dt*3.2);vyaw*=dec;vpit*=dec;if(Math.abs(vyaw)<.004)vyaw=0;if(Math.abs(vpit)<.004)vpit=0;
+ var o=pit<P0?pit-P0:pit>P1?pit-P1:0;if(o){pit-=o*Math.min(1,dt*10);vpit=0;}
+ var zo=zf<ZMIN?zf-ZMIN:zf>ZMAX?zf-ZMAX:0;if(zo)zf-=zo*Math.min(1,dt*10);
+ if(fly){var r=Math.min(1,dt*6.5);zf+=(fly.z-zf)*r;foc.lerp(fly.p,r);if(Math.abs(fly.z-zf)<.004&&foc.distanceToSquared(fly.p)<.0004)fly=null;}
+ else{/* 拉遠回全景時，畫面中心慢慢回到正中間 */var home=sm((zf-.74)/.26);if(home>0)foc.lerp(FOC0,Math.min(1,dt*5*home));}
+ var r2=Math.hypot(foc.x,foc.z);if(r2>13.5){foc.x*=13.5/r2;foc.z*=13.5/r2;}
+ if(zf>.8&&!fly)focI=-1;
+ if(!RM&&!flying&&!vyaw&&!fly&&zf>.95&&uS<.02)yaw+=dt*.012;}
 var is2={x:0,y:0,z:0};
-function isleAt(x,y){var best=-1,bd=1e9;isles.forEach(function(I){scr(I.g,null,is2);var cx=is2.x,cy=is2.y;scr(I.g,tv2.set(IR,0,0).applyQuaternion(cam.quaternion),sp2);var r=Math.abs(sp2.x-cx),dx=(x-cx)/r,dy=(y-cy+r*.1)/(r*.62),d=dx*dx+dy*dy;if(d<1&&d<bd){bd=d;best=I.i;}});return best;}
-function astroAt(x,y){var best=null,bd=26*26;astros.forEach(function(A){if(!A.g.visible)return;scr(A.g,tv2.set(0,.35,0),sp2);var d=(sp2.x-x)*(sp2.x-x)+(sp2.y-y)*(sp2.y-y);if(d<bd){bd=d;best=A;}});return best;}
-function hover(x,y){var a=astroAt(x,y);hoverI=a?-1:isleAt(x,y);zone.classList.toggle('pt',!!a||hoverI>=0);}
-function tap(x,y){if(megaCard.classList.contains('on')||chatCard.classList.contains('on')){closeCards();return;}var a=astroAt(x,y);if(a){openChat(a);return;}var i=isleAt(x,y);if(i>=0)goIsle(i,x,y);}
+function isleAt(x,y){var best=-1,bd=1e9;isles.forEach(function(I){scr(I.g,null,is2);if(is2.z>1)return;var cx=is2.x,cy=is2.y;scr(I.g,tv2.set(IR,0,0).applyQuaternion(cam.quaternion),sp2);var r=Math.abs(sp2.x-cx),sq=Math.max(.28,Math.abs(Math.sin(pit))),dx=(x-cx)/r,dy=(y-cy)/(r*sq+r*.12),d=dx*dx+dy*dy;if(d<1&&d<bd){bd=d;best=I.i;}});return best;}
+function astroAt(x,y){var best=null,rr=ptype==='mouse'?26:34,bd=rr*rr;astros.forEach(function(A){if(!A.g.visible)return;scr(A.g,tv2.set(0,.35,0),sp2);if(sp2.z>1)return;var d=(sp2.x-x)*(sp2.x-x)+(sp2.y-y)*(sp2.y-y);if(d<bd){bd=d;best=A;}});return best;}
+/* 名牌不接手指（不然手指剛好落在名牌上，整個手勢就失效）；改成由這裡判斷點到哪一張 */
+function labelAt(x,y){var best=null,ba=1e9;if(labs.style.opacity==='0')return null;for(var i=0;i<LB.length;i++){var e=LB[i].el;if(!e.onclick||e.style.visibility==='hidden'||e.style.display==='none')continue;var c=e.firstElementChild;if(!c)continue;var r=c.getBoundingClientRect();if(!r.width||x<r.left-4||x>r.right+4||y<r.top-4||y>r.bottom+4)continue;var ar=r.width*r.height;if(ar<ba){ba=ar;best=LB[i];}}return best;}
+var hotL=null;function hover(x,y){var L=labelAt(x,y);if(L!==hotL){if(hotL)hotL.el.classList.remove('hot');hotL=L;if(L)L.el.classList.add('hot');}var a=L?null:astroAt(x,y);hoverI=(L||a)?-1:isleAt(x,y);zone.classList.toggle('pt',!!L||!!a||hoverI>=0);}
+/* 點一下：同學→聊天。島：滑鼠直接進站；手指第一下先貼近看，貼近之後再點一下才進站（不用等雙擊，單擊不會變慢）。點空白處回全景。 */
+function tap(x,y,pt){if(megaCard.classList.contains('on')||chatCard.classList.contains('on')){closeCards();return;}var L=labelAt(x,y);if(L){L.el.onclick({clientX:x,clientY:y,stopPropagation:function(){}});return;}var a=(pt==='mouse'||zf<=.62)?astroAt(x,y):null;if(a){openChat(a);return;}var i=isleAt(x,y);
+ if(i>=0){if(pt==='mouse'||focI===i){goIsle(i,x,y);return;}var I=isles[i];flyTo(.42,tv2.set(I.g.position.x,I.by+.6,I.g.position.z),i);C.beep(500,.05);hintOnce('再點一下這座島，就進這一站');return;}
+ if(zf<.9||zf>1.04||foc.distanceToSquared(FOC0)>1){flyTo(1,FOC0);}}
+var hinted={};function hintOnce(t){if(hinted[t])return;hinted[t]=1;C.toast(t);}
 
 /* ---------- 更衣室 ---------- */
 var look=K.fixLook(lsGet('aifleet_look')||K.randomLook(null)),hasLook=!!lsGet('aifleet_look');
@@ -5772,12 +5829,12 @@ function remakeMe(){if(me){var i=astros.indexOf(me);if(i>=0)astros.splice(i,1);v
  mkAstro('柏翰老師',K.fixLook({zone:'m',style:'royal',body:'std',helm:'round',hair:'none',visor:1,suit:7,trim:0,acc:'cape'}),port,{teacher:true,big:1.25,seed:3});remakeMe();})();
 
 /* ---------- 尺寸 ---------- */
-var dist=27,portrait=false,fovA=36,offX=0,offY=0;
-function size(){W=innerWidth;H=innerHeight;portrait=W/H<.85;ren.setSize(W,H,false);cam.aspect=W/H;fovA=portrait?44:36;var half=Math.tan(fovA*PI/360),ox=portrait?0:Math.min(.14,Math.max(.04,(W-800)/3200));dist=Math.max(30,(RING+IR+1.6)/(half*cam.aspect*(1-ox*2.1)));offX=-W*ox;offY=portrait?H*.13:H*.05;}
+var dist=27,portrait=false,fovA=36,offX=0,offY=0,sized=false;
+function size(){W=innerWidth;H=innerHeight;portrait=W/H<.85;ren.setSize(W,H,false);cam.aspect=W/H;fovA=portrait?44:36;var half=Math.tan(fovA*PI/360),ox=portrait?0:Math.min(.14,Math.max(.04,(W-800)/3200));dist=Math.max(30,(RING+IR+1.6)/(half*cam.aspect*(1-ox*2.1)));offX=-W*ox;offY=portrait?H*.13:H*.05;if(!sized){sized=true;pit=portrait?.84:.56;}var zb=(portrait||small)?Math.round(hud.getBoundingClientRect().height+H*.07):0;zone.style.bottom=zb?zb+'px':'';down.style.bottom=zb?(zb+6)+'px':'';}
 addEventListener('resize',size);size();
 
 /* ---------- 主迴圈 ---------- */
-var DBG={f:1,x:0,y:0,z:0};var last=performance.now(),clock=0,on=1,started=false,fpsN=0,fpsT=0,fzN=0,lv={x:0,y:0,z:0};
+var DBG={f:1,x:0,y:0,z:0},fA=0,fN=0;var last=performance.now(),clock=0,on=1,started=false,fpsN=0,fpsT=0,fzN=0,lv={x:0,y:0,z:0};
 function ready(){if(started)return;started=true;mkFlag();mkShips();if(!RM&&ships.length)launchAll();else onLanded();
 }
 (function waitIntro(){var it=$('#intro');if(!it||it.classList.contains('off'))return setTimeout(ready,250);var mo=new MutationObserver(function(){if(it.classList.contains('off')){mo.disconnect();setTimeout(ready,250);}});mo.observe(it,{attributes:true,attributeFilter:['class']});setTimeout(function(){if(!started){mkFlag();mkShips();}},900);})();
@@ -5792,17 +5849,17 @@ function frame(now){requestAnimationFrame(frame);var rdt=Math.min((now-last)/100
  if(stt==='mine'){if(RM)uS=uT;else{uS+=(uT-uS)*Math.min(1,dt*6.5);if(Math.abs(uT-uS)<.0006)uS=uT;uS=Math.max(uS,Math.min(1,(sY-H*1.3)/(H*.2)));}}else uS=1;
  on=1-uS;cheer+=((uS>.03&&uS<.999?1:0)-cheer)*Math.min(1,dt*6);
  var show=!st&&!document.hidden,rsE=$('#routeSec'),op=show?1-.62*sm((sY-(rsE.offsetTop-H*1.3))/H):0;cv.style.opacity=op.toFixed(3);
- var hide=uS>.05?'0':'1';if(labs.style.opacity!==hide){labs.style.opacity=hide;megaBox.style.opacity=hide;labs.style.visibility=megaBox.style.visibility=uS>.3?'hidden':'';}zone.style.pointerEvents=uS>.02?'none':'';var ho=(1-sm(uS/.22)).toFixed(2);if(hud.style.opacity!==ho){hud.style.opacity=ho;hud.style.visibility=ho==='0.00'?'hidden':'';}
+ var hide=uS>.05?'0':'1';if(labs.style.opacity!==hide){labs.style.opacity=hide;megaBox.style.opacity=hide;labs.style.visibility=megaBox.style.visibility=uS>.3?'hidden':'';}zone.style.pointerEvents=(uS>.02&&!dragging&&np===0)?'none':'';var ho=(1-sm(uS/.22)).toFixed(2);if(hud.style.opacity!==ho){hud.style.opacity=ho;hud.style.visibility=ho==='0.00'?'hidden':'';}
  voteOn=!!(md==='vote'||(window.ARENA&&window.ARENA._vs&&window.ARENA._vs.round));if(voteOn&&wardOn)closeWard(true);var wantLive=live&&!voteOn;if(wantLive!==liveEff)applyLive(wantLive);
  if(!show||(wardOn&&innerWidth<=760))return;
  if(stt==='orig'&&froz)return;
  var frozen=!!md;if(frozen&&(fzN++%15))return;
  /* 視角：平常繞著島轉；升空時鏡頭跟著火箭往上，最後對到原本首頁的鏡頭 */
- if(!dragging&&uS<.02){yaw+=vyaw*dt;vyaw*=Math.exp(-dt*2.6);if(Math.abs(vyaw)<.02&&!RM&&!flying)yaw+=dt*.012;var o=pit<P0?pit-P0:pit>P1?pit-P1:0;if(o)pit-=o*Math.min(1,dt*9);}
- var k=sm(uS),pe=pit<P0?P0+rubber(pit-P0,.5):pit>P1?P1+rubber(pit-P1,.5):pit,ppA=portrait?pe+.28:pe,pp=ppA+(.2-ppA)*k,d=dist*DBG.f,ty=1.4+9.6*k;
+ viewTick(dt);
+ var k=sm(uS),ppA=clampSoft(pit,P0,P1,.5),pp=ppA+(.2-ppA)*k,zE=clampSoft(zf,ZMIN,ZMAX,.4),d=dist*DBG.f*(zE+(1-zE)*k),ty=foc.y+(11-foc.y)*k,fx=foc.x*(1-k),fz=foc.z*(1-k);
  cam.fov=fovA+(42-fovA)*k;if(k<.9995)cam.setViewOffset(W,H,offX*(1-k),offY*(1-k),W,H);else cam.clearViewOffset();cam.updateProjectionMatrix();
  var shk=(!RM&&uS>.01&&uS<.32)?.05*Math.sin(PI*uS/.32):0;
- tgt.set(DBG.x+Math.sin(now*.083)*shk,ty+DBG.y+Math.cos(now*.117)*shk,DBG.z);cam.position.set(tgt.x+Math.sin(yaw)*Math.cos(pp)*d,tgt.y+Math.sin(pp)*d,tgt.z+Math.cos(yaw)*Math.cos(pp)*d);cam.lookAt(tgt);cam.updateMatrixWorld();lrig.quaternion.copy(cam.quaternion);
+ tgt.set(fx+DBG.x+Math.sin(now*.083)*shk,ty+DBG.y+Math.cos(now*.117)*shk,fz+DBG.z);cam.position.set(tgt.x+Math.sin(yaw)*Math.cos(pp)*d,tgt.y+Math.sin(pp)*d,tgt.z+Math.cos(yaw)*Math.cos(pp)*d);cam.lookAt(tgt);cam.updateMatrixWorld();lrig.quaternion.copy(cam.quaternion);
  /* 升空時島慢慢變暗、退到下面 */
  hemiL.intensity=.6*(1-.45*k);sunL.intensity=1.35*(1-.55*k);fillL.intensity=.5*(1-.4*k);scene.fog.near=k<.004?200:70-52*k;scene.fog.far=k<.004?400:190-118*k;
  var ig=uS<.5?Math.sin(PI*Math.min(1,uS/.5)):0;port.glow.material.opacity=ig*.9;port.rim.material.opacity=.5+ig*.5;
@@ -5821,10 +5878,11 @@ function frame(now){requestAnimationFrame(frame);var rdt=Math.min((now-last)/100
  /* 交接：兩支火箭已經完全重疊，下一格換成原本那支繼續拆（島的畫面停在這一格，省效能） */
  if(stt==='orig')froz=true;
  else if(stt==='mine'&&uS>=.9995&&flag&&window.__FLAG&&!DBG.hold){stt='handA';window.__ISL_ON=false;}
+ if(fpsEl){fA+=rdt;fN++;if(fA>=.5){fpsEl.textContent=Math.round(fN/fA)+' 格/秒 ・ 畫 '+ren.info.render.calls+' 次 ・ '+W+'×'+H+' @'+ren.getPixelRatio().toFixed(2);fA=0;fN=0;}}
  /* 太慢就自動降級 */
  if(fpsN<80&&stt==='mine'&&uS<.01&&!flying){fpsN++;fpsT+=rdt;if(fpsN===80&&fpsT/80>.045){ren.setPixelRatio(1);bg.children[0].visible=false;}}}
 requestAnimationFrame(frame);
-window.__isl={state:function(){return {u:uS,stt:stt,froz:froz,closed:origClosed(),flag:!!flag};},dbg:DBG,ward:function(L,y){look=K.fixLook(L);wardPaint();wardFig();wyaw=y||0;wv=0;},setYaw:function(v,p){yaw=v;if(p!=null)pit=p;},ren:ren,scene:scene,cam:cam,isles:isles,ships:ships,astros:astros,launch:launchAll,openWard:openWard,calls:function(){return ren.info.render.calls+'/'+ren.info.render.triangles;},look:function(){return look;}};
+window.__isl={view:function(){return {yaw:yaw,pit:pit,zf:zf,fx:foc.x,fz:foc.z,focI:focI,fly:!!fly,np:np,sv:scrollV};},state:function(){return {u:uS,stt:stt,froz:froz,closed:origClosed(),flag:!!flag};},dbg:DBG,ward:function(L,y){look=K.fixLook(L);wardPaint();wardFig();wyaw=y||0;wv=0;},setYaw:function(v,p){yaw=v;if(p!=null)pit=p;},ren:ren,scene:scene,cam:cam,isles:isles,ships:ships,astros:astros,launch:launchAll,openWard:openWard,calls:function(){return ren.info.render.calls+'/'+ren.info.render.triangles;},look:function(){return look;}};
 })();
 
 </script>
