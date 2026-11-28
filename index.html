@@ -23,6 +23,8 @@ header{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:c
 .sp{flex:1}
 .chip{font-size:.78rem;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:.35rem .8rem;background:var(--glass);transition:transform .1s ease-out,background .2s}
 .chip:active,.btn:active,.card:active{transform:scale(.97)}
+#adminBtn{background:#FFD400;border-color:#FFD400;color:#141200;font-weight:800}
+#adminBtn:hover{background:#ffe04d}
 .chip[aria-pressed=true]{background:var(--c);border-color:transparent;color:#fff}
 section{padding:0 1.1rem}
 .hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:9svh;position:relative}
@@ -584,7 +586,8 @@ addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(document.
  if(e.key==='/'){e.preventDefault();topen();}
  else if(e.key==='Escape'){if(term.classList.contains('on'))tclose();else if($('#pod').classList.contains('on'))$('#pod').classList.remove('on');else leave();}
  else if(e.key>='1'&&e.key<='5'){enter(+e.key-1,W/2,H/2);}
- else if((e.key==='t'||e.key==='T')&&$('#st').classList.contains('open')){toggleTimer();}});
+ else if((e.key==='t'||e.key==='T')&&$('#st').classList.contains('open')){toggleTimer();}
+ else if((e.key==='t'||e.key==='T')&&window.APP&&window.APP.adminKey){window.APP.adminKey(e);}});
 
 /* ---------- intro (skippable, ~7s) ---------- */
 var itm=[],iw=$('#iw');
@@ -758,6 +761,8 @@ var STN=[
 
 /* ================= 資料層：有設定 API 就連 Google，沒有就存在這台瀏覽器 ================= */
 var S=ls('aifleet_me')||{},ME={mine:[],wall:[],surveyDone:false,teacher:false};
+/* 用老師密碼登入過的瀏覽器：一載入就先把「老師後台」按鈕亮出來，不等開場動畫和雲端（資料還是要雲端驗過密碼才給） */
+if(S.tcode){var _ab=document.getElementById('adminBtn');if(_ab)_ab.hidden=false;}
 function db(){var d=ls('aifleet_db')||{};d.works=d.works||[];d.surveys=d.surveys||[];d.rounds=d.rounds||[];d.votes=d.votes||[];d.bonus=d.bonus||[];return d;}
 function localNames(D){var m={};D.works.forEach(function(w){m[w.name]=1;});D.surveys.forEach(function(s){m[s.name]=1;});return Object.keys(m);}
 function localApi(a,d,cb){var D=db(),r;
@@ -811,7 +816,7 @@ function refresh(cb){if(!S.name){paint();cb&&cb();return;}api('state',{},functio
 function latest(i){var a=ME.mine.filter(function(w){return w.station===i;});return a.length?a[a.length-1]:null;}
 var SL={pending:['審核中','wait'],public:['已公開','ok'],returned:['老師有回饋','ret']};
 function paint(){
- $('#who').textContent=S.name||'登入';$('#adminBtn').hidden=!ME.teacher;$('#modeTag').hidden=!LOCAL;
+ $('#who').textContent=S.name||'登入';$('#adminBtn').hidden=!(ME.teacher||S.tcode);$('#modeTag').hidden=!LOCAL;
  if(LOCAL)$('#foot').textContent='AI 實戰課 ・ 示範模式：資料只存在這台瀏覽器，還沒有接上雲端';
  var n=0;ST.forEach(function(s,i){var w=latest(i);if(window.OC)window.OC.mark(i,!!w);var e=$('#cst'+i),sh=$('#ships').children[i];
   if(w){n++;e.textContent=SL[w.status][0];e.className='st go';sh.className='on';sh.style.background=s.k;}else{e.textContent='未交';e.className='st';sh.className='';sh.style.background='';}});
@@ -960,7 +965,7 @@ function key(e){var m=document.body.dataset.modal;if(m==='hv'){if(e.key==='Arrow
 C.CMD.whoami=function(){return S.name?(S.name+(ME.teacher?'（老師）':'')+' ・ 已交 '+ST.filter(function(s,i){return latest(i);}).length+' 站'):'還沒登入';};
 C.CMD.status=function(){return ST.map(function(s,i){var w=latest(i);return '0'+(i+1)+' '+s.n+'　'+(w?SL[w.status][0]:'未交');}).join('\n');};
 C.CMD.ls='任務.txt  艦隊名單.txt  作品牆/';C.CMD['cat 任務.txt']=function(){return STN.map(function(d,i){return '第'+NUM[i]+'站：'+d.tasks[d.tasks.length-1][0];}).join('\n');};C.CMD['cat 艦隊名單.txt']=function(){return '每交一站多一艘船，五站交完艦隊成軍。';};
-window.APP={refresh:refresh,adminLoad:adminLoad,setCohort:function(c){S.cohort=c;ls('aifleet_me',S);adHas=false;if(window.ARENA&&window.ARENA.reset)window.ARENA.reset();},NUM:NUM,ST:ST,api:api,esc:esc,safeUrl:safeUrl,me:function(){return S;},who:function(){return ME;},adminOpen:adminOpen,adminPaint:adminPaint,setTab:function(t){tab=t;},tab:function(){return tab;},modal:modal,local:LOCAL,start:function(){paint();if(S.name){api('login',{},function(r){if(r&&r.ok){ME.teacher=!!r.teacher;afterLogin();}else{S={};ls('aifleet_me',null);paint();showLogin();}});}else showLogin();},renderStation:renderStation,validate:validate,submit:submit,key:key,local:LOCAL};
+window.APP={adminKey:function(e){if((ME.teacher||S.tcode)&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();adminOpen();}},refresh:refresh,adminLoad:adminLoad,setCohort:function(c){S.cohort=c;ls('aifleet_me',S);adHas=false;if(window.ARENA&&window.ARENA.reset)window.ARENA.reset();},NUM:NUM,ST:ST,api:api,esc:esc,safeUrl:safeUrl,me:function(){return S;},who:function(){return ME;},adminOpen:adminOpen,adminPaint:adminPaint,setTab:function(t){tab=t;},tab:function(){return tab;},modal:modal,local:LOCAL,start:function(){paint();if(S.name){api('login',{},function(r){if(r&&r.ok){ME.teacher=!!r.teacher;afterLogin();}else{S={};ls('aifleet_me',null);paint();showLogin();}});}else showLogin();},renderStation:renderStation,validate:validate,submit:submit,key:key,local:LOCAL};
 })();
 
 </script>
