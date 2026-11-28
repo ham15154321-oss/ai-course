@@ -4883,7 +4883,7 @@ window.CLASSX={sync:sync,adminLoad:adminLoad,adminHtml:adminHtml};sync();
 
 </script>
 <script>
-/* ===== 課前問卷總表（v2.3：十題全看得到、這一班想做什麼、一人一張卡、A4 直式報表）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
+/* ===== 課前問卷總表（v2.4：名單外的人可以直接加進名單；v2.3：十題全看得到、這一班想做什麼、一人一張卡、A4 直式報表）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
 (function(){
 'use strict';
 var A=window.APP,C=window.CORE,esc=A.esc;
@@ -4959,10 +4959,10 @@ function html(ad){AD=ad;var X=M(),h='<div class="sx">';
   h+='<div class="sxb">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了<em>'+r.p+'%</em><i><u style="width:'+r.p+'%"></u></i></div>';}).join('')+'</div>';
   h+='<h4>還沒填 <span>'+X.todo.length+' 人</span></h4><p class="sxs">按「複製還沒填的名單」，貼到 LINE 給業務去提醒。</p>';
   h+=['正取','試聽'].map(function(r){var l=X.todo.filter(function(n){return X.role[n]===r;});return l.length?'<div class="sxg"><h5>'+r+'（'+l.length+'）</h5><div class="sxn">'+l.map(function(n){return '<span title="'+esc(n)+'">'+esc(n)+'</span>';}).join('')+'</div></div>':'';}).join('')||'<div class="sxg">全部都填了。</div>';
-  if(X.extra.length){h+='<h4>名字對不上，要你確認 <span class="y">'+X.extra.length+' 份</span></h4><p class="sxs">有人填問卷時沒打全名，系統對不到名單。選他是誰按確認，之後就算他已填。</p>';
+  if(X.extra.length){h+='<h4>名字對不上，要你確認 <span class="y">'+X.extra.length+' 份</span></h4><p class="sxs">有人填問卷時沒打全名，或不在報名名單上。選他是誰按確認；名單上沒有他，就直接按確認加進名單（預設正取，要算試聽先在選單改）。</p>';
    X.extra.forEach(function(s){var n=s.name,g=guess(n,X),me=X.self.indexOf(String(n).toLowerCase())>=0,a=s.answers||{};
-    h+='<div class="sxf" data-n="'+esc(n)+'"><b>'+esc(n)+'</b><span class="hint">'+(me?'看起來是你自己測試填的，按「不算」就好':g?'看起來是 <b>'+esc(g)+'</b>（'+X.role[g]+'），對的話按確認':esc(a.job||'')+'・'+when(s.ts)+' 填的')+'</span>'+
-     '<select aria-label="'+esc(n)+' 是名單上的誰"><option value="">他是名單上的誰？</option>'+X.todo.map(function(x){return '<option'+(x===g?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select><button class="chip pri" data-sx="ok">確認</button><button class="chip" data-sx="skip">不算</button></div>';});}
+    h+='<div class="sxf" data-n="'+esc(n)+'"><b>'+esc(n)+'</b><span class="hint">'+(me?'看起來是你自己測試填的，按「不算」就好':g?'看起來是 <b>'+esc(g)+'</b>（'+X.role[g]+'），對的話按確認':esc(a.job||'')+'・'+when(s.ts)+' 填的・名單上找不到，按確認就加進名單')+'</span>'+
+     '<select aria-label="'+esc(n)+' 是名單上的誰"><option value="">他是名單上的誰？</option>'+X.todo.map(function(x){return '<option'+(x===g?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'<option value="+正取"'+(!g&&!me?' selected':'')+'>＋ 新學生，加入名單（正取）</option><option value="+試聽">＋ 新學生，加入名單（試聽）</option></select><button class="chip pri" data-sx="ok">確認</button><button class="chip" data-sx="skip">不算</button></div>';});}
   var mp=AD.svmap||{},mk=Object.keys(mp).filter(function(k){return (AD.surveys||[]).some(function(s){return s.name===k;});});
   if(mk.length)h+='<div class="sxm"><span class="sxs" style="margin:0;align-self:center">已經對應過：</span>'+mk.map(function(k){return '<button class="chip" data-sx="undo" data-n="'+esc(k)+'" title="按一下取消">'+esc(k)+' → '+(mp[k]==='-'?'不算':esc(mp[k]))+'　×</button>';}).join('')+'</div>';}
  var rows=rowsOf(X);
@@ -4976,6 +4976,14 @@ function setMap(from,v,msg){var old=JSON.parse(JSON.stringify(AD.svmap||{})),d={
  if(v===null){delete AD.svmap[from];d.clear=true;}else if(v==='-'){AD.svmap[from]='-';d.skip=true;}else{AD.svmap[from]=v;d.to=v;}
  A.adminPaint();toast(msg);
  A.api('survey_map',d,function(r){if(r&&r.ok){if(r.svmap)AD.svmap=r.svmap;return;}AD.svmap=old;A.adminPaint();toast((r&&r.msg)||'剛剛沒有存成功，請再按一次');});}
+
+/* 名單上沒有的人：直接加進這一梯的名單（他自己登入過會是「不在名單」，就改身分） */
+function addStu(n,role,b){var co=(AD.cohort&&AD.cohort!=='*')?AD.cohort:(AD.current||'');if(!co){toast('先在上面選梯次');return;}
+ var R=AD.roster||(AD.roster=[]),hit=R.filter(function(x){return x.name===n&&String(x.cohort||'')===co;})[0],old=hit?hit.role:null;
+ if(hit)hit.role=role;else R.push({name:n,cohort:co,role:role});
+ b.disabled=true;A.adminPaint();toast('好，'+n+' 加進 '+co+' 梯次名單（'+role+'）');
+ var d=hit?{who:n,role:role,cohort:co}:{names:[n],role:role,cohort:co};
+ A.api(hit?'roster_role':'roster_add',d,function(r){if(r&&r.ok)return;if(hit)hit.role=old;else R.splice(R.indexOf(R.filter(function(x){return x.name===n&&x.cohort===co;})[0]),1);A.adminPaint();toast((r&&r.msg)||'剛剛沒有存成功，請再按一次');});}
 
 function copyText(t,ok){function fb(){var x=document.createElement('textarea');x.value=t;x.setAttribute('readonly','');x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();var g=false;try{g=document.execCommand('copy');}catch(e){}x.remove();toast(g?ok:'複製不了，請長按選取文字');}
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast(ok);},fb);else fb();}
@@ -5078,7 +5086,7 @@ document.addEventListener('click',function(e){var b=e.target.closest&&e.target.c
  else if(k==='print')doPrint();
  else if(k==='xlsx'){busy(b,true);(window.ExcelJS?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')).then(buildXlsx).then(function(blob){save(blob,fname('xlsx'));toast('Excel 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
  else if(k==='pdf'){busy(b,true);(window.html2pdf?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).then(function(){return window.html2pdf().set({margin:0,filename:fname('pdf'),image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollX:0,scrollY:0,x:0,y:0,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css']}}).from(report(),'string').save();}).then(function(){toast('PDF 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
- else if(k==='ok'||k==='skip'){var box=b.closest('.sxf'),n=box.dataset.n;if(k==='skip'){setMap(n,'-',n+' 不列入這一梯');return;}var v=box.querySelector('select').value;if(!v){toast('先選他是誰');return;}setMap(n,v,'好，'+n+' 就是 '+v);}
+ else if(k==='ok'||k==='skip'){var box=b.closest('.sxf'),n=box.dataset.n;if(k==='skip'){setMap(n,'-',n+' 不列入這一梯');return;}var v=box.querySelector('select').value;if(!v){toast('先選他是誰');return;}if(v.charAt(0)==='+'){addStu(n,v.slice(1),b);return;}setMap(n,v,'好，'+n+' 就是 '+v);}
  else if(k==='undo'){var u=b.dataset.n;setMap(u,null,'已取消 '+u+' 的對應');}});
 window.SVX={html:html,_lineText:lineText,_model:function(){return M();}};
 })();
