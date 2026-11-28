@@ -809,8 +809,8 @@ function doLogin(){var n=$('#lname').value.replace(/[\s\u3000]/g,'');if(!n){$('#
 $('#lgo').onclick=doLogin;['lname'].forEach(function(id){$('#'+id).addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});});
 var outT;$('#who').onclick=function(){var b=this;if(!S.name){showLogin();return;}if(b.dataset.arm){ls('aifleet_me',null);S={};ME={mine:[],wall:[],surveyDone:false,teacher:false};delete b.dataset.arm;C.leave();paint();showLogin();return;}b.dataset.arm=1;b.textContent='再按一次登出';clearTimeout(outT);outT=setTimeout(function(){delete b.dataset.arm;paint();},2600);};
 var WANT_SV=/[?&]survey\b/.test(location.search);
-function afterLogin(){refresh(function(){if(!ME.teacher&&(WANT_SV||(!ME.surveyDone&&!ls('aifleet_skip_'+S.name))))showSurvey();WANT_SV=false;});}
-function refresh(cb){if(!S.name){paint();cb&&cb();return;}api('state',{},function(r){if(r&&r.ok){ME.mine=r.mine||[];ME.wall=r.wall||[];ME.surveyDone=!!r.surveyDone;ME.line=r.line||'';ME.mats=r.mats||[];ME.hb=r.hb||'';ME.stuck=r.stuck||[];ME.cohort=r.cohort||'';}paint();if(window.CLASSX)window.CLASSX.sync();cb&&cb();});}
+function afterLogin(){refresh(function(){if(!ME.teacher&&ME.svOpen!==false&&(WANT_SV||(!ME.surveyDone&&!ls('aifleet_skip_'+S.name))))showSurvey();WANT_SV=false;});}
+function refresh(cb){if(!S.name){paint();cb&&cb();return;}api('state',{},function(r){if(r&&r.ok){ME.mine=r.mine||[];ME.wall=r.wall||[];ME.surveyDone=!!r.surveyDone;ME.line=r.line||'';ME.mats=r.mats||[];ME.hb=r.hb||'';ME.svOpen=r.svOpen!==false;ME.stuck=r.stuck||[];ME.cohort=r.cohort||'';}paint();if(window.CLASSX)window.CLASSX.sync();cb&&cb();});}
 
 /* ================= 首頁狀態 ================= */
 function latest(i){var a=ME.mine.filter(function(w){return w.station===i;});return a.length?a[a.length-1]:null;}
@@ -4859,11 +4859,11 @@ function adminHtml(mode){if(mode==='mat')return matHtml();if(!AD)return '<p clas
  /* LINE */
  h+='<div class="card2"><h4>課後 LINE 群組</h4><p class="cap" style="margin:0">貼上群組的邀請連結，學生首頁左下角就會出現「加入課後 LINE 群」，點開是 QR code。清空再儲存就會收起來。</p><input class="fld" id="cxLine" inputmode="url" placeholder="https://line.me/…" value="'+esc(AD.line||'')+'"><div class="row"><button class="btn" data-cx="line">儲存連結</button></div></div>';
  return h+'</div>';}
-function hbHtml(){var o=AD.hb||{map:{},extra:[]},M=o.map||{},R=(AD.roster||[]).map(function(x){return x.name;}),has=R.filter(function(n){return M[n];}),miss=R.filter(function(n){return !M[n];}),X=o.extra||[],h='<div class="card2"><h4>學生專屬手冊</h4>';
+function hbHtml(){var o=AD.hb||{map:{},extra:[]},M=o.map||{},R=(AD.roster||[]).filter(function(x){return x.role!=='不在名單'&&(AD.svself||[]).indexOf(x.name)<0;}).map(function(x){return x.name;}),has=R.filter(function(n){return M[n];}),miss=R.filter(function(n){return !M[n];}),X=o.extra||[],h='<div class="card2"><h4>學生專屬手冊</h4>';
  h+='<p class="cap" style="margin:0 0 .6rem">每位學生首頁會出現金色的「下載我的專屬手冊」，只看得到自己那一份。</p>';
  h+='<div class="mxhow"><div><b>1</b>產生器按「全班一起下載（zip）」，解壓縮</div><div><b>2</b>把整個資料夾拖進 Google 雲端硬碟</div><div><b>3</b>對資料夾按右鍵 → 共用 → 複製連結，貼在下面，按「配對」</div></div>';
  h+='<input class="fld" id="cxHb" inputmode="url" placeholder="貼上資料夾連結：https://drive.google.com/drive/folders/…" value="'+esc(o.folder?'https://drive.google.com/drive/folders/'+o.folder:'')+'"><div class="row"><button class="btn" data-cx="hs">'+(o.folder?'重新配對（資料夾裡有新檔案時按）':'配對')+'</button></div>';
- if(o.folder){h+='<div class="hbs"><span>配對好 <b>'+has.length+'</b> 位</span><span>名單上還沒有手冊 <b>'+miss.length+'</b> 位</span>'+(X.length?'<span>沒對到人的檔案 <b>'+X.length+'</b> 份</span>':'')+'</div>';
+ if(o.folder){h+='<div class="hbs"><span>配對好 <b>'+has.length+'</b> 位</span><span>正取、試聽還沒有手冊 <b>'+miss.length+'</b> 位</span>'+(X.length?'<span>沒對到人的檔案 <b>'+X.length+'</b> 份</span>':'')+'</div>';
   if(miss.length)h+='<p class="hbmiss">還沒有手冊：'+miss.map(esc).join('、')+'</p>';
   if(X.length){h+='<p class="gnote" style="margin:.6rem 0"><b>這幾份沒對到名單上的名字</b>，通常是檔名的名字打錯。選一下是誰，按「指定」。</p>';
    h+=X.map(function(x){return '<div class="hbx"><b>'+esc(x.f)+'</b><select data-hbsel="'+esc(x.id)+'"><option value="">選是誰</option>'+miss.map(function(n){return '<option>'+esc(n)+'</option>';}).join('')+'</select><button class="chip" data-cx="hp" data-id="'+esc(x.id)+'">指定</button></div>';}).join('');}
@@ -5013,6 +5013,7 @@ function rowsOf(X){var rows=X.done.slice().sort(function(a,b){return X.by[a].ts-
 function html(ad){AD=ad;var X=M(),h='<div class="sx">';
  h+='<div class="sxh"><h3>課前問卷總表<small>'+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</small></h3><div class="sxa">'+
   '<button class="chip pri" data-sx="copy"'+(X.names.length?'':' disabled')+'>複製還沒填的名單</button><button class="chip" data-sx="gen"'+(X.names.length||X.extra.length?'':' disabled')+' title="給專屬講義產生器用：名單上每一位＋他的問卷">下載給產生器</button><button class="chip" data-sx="xlsx">下載 Excel</button><button class="chip" data-sx="pdf">下載 PDF</button><button class="chip" data-sx="print">列印</button></div></div>';
+h+='<div style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;justify-content:space-between;border:1px solid '+(AD.svOff?'rgba(255,90,95,.5)':'rgba(125,255,176,.45)')+';border-radius:1rem;padding:.8rem 1rem;margin:.8rem 0;background:rgba(255,255,255,.03)"><div style="flex:1;min-width:14rem"><b style="display:flex;align-items:center;gap:.5rem;font-size:1rem"><i style="width:.6rem;height:.6rem;border-radius:50%;background:'+(AD.svOff?'#FF5A5F':'#7dffb0')+'"></i>課前問卷：'+(AD.svOff?'已關閉':'開放中')+'</b><span class="cap" style="display:block;margin:.2rem 0 0">'+(AD.svOff?'學生登入不會跳出問卷，收到的問卷和總表都還在。下一梯要收問卷時再打開。':'還沒填的學生一登入就會跳出問卷。快上課了可以關掉。')+'</span></div><button class="chip'+(AD.svOff?' pri':'')+'" data-sx="svt">'+(AD.svOff?'重新打開問卷':'關閉問卷')+'</button></div>';
  h+='<a class="sxgo" href="https://claude.ai/artifact/XwVxoTWCXjnqFF462oRaFa" target="_blank" rel="noopener"><div><b>打開專屬講義產生器</b><br><span>先按上面「下載給產生器」，再到產生器按「匯入學生資料包」</span></div><i>打開 ↗</i></a>';
  if(!X.names.length)h+='<p class="sxs">這一梯還沒有正取或試聽的名單，所以算不出誰還沒填。先到「名單和出席」把名單加好；下面先列出已經填的人。</p>';
  else{
@@ -5181,7 +5182,8 @@ function t5close(){if(!t5el||t5el.hidden)return;document.removeEventListener('ke
 
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-sx]');if(!b||!AD)return;var k=b.dataset.sx;
  if(k==='tbl')t5open(b);
- else if(k==='copy')copyText(lineText(),'已複製，可以貼到 LINE 了');
+ else if(k==='svt'){var off=!AD.svOff;b.disabled=true;A.api('sv_toggle',{off:off},function(r){b.disabled=false;if(r&&r.ok){AD.svOff=!!r.off;A.adminPaint();toast(r.off?'問卷已關閉，學生登入不會再跳出來':'問卷已重新打開');}else toast((r&&r.msg)||'沒有成功，請再按一次');});return;}
+ if(k==='copy')copyText(lineText(),'已複製，可以貼到 LINE 了');
  else if(k==='print')doPrint();
  else if(k==='gen'){var X=M(),out=X.names.map(function(n){var o={name:n,role:X.role[n]};if(X.by[n])o.survey=X.by[n].a;return o;});
   X.extra.forEach(function(s){if(!out.some(function(o){return o.name===s.name;}))out.push({name:s.name,role:'名單外',survey:s.answers||{}});});
