@@ -4883,7 +4883,7 @@ window.CLASSX={sync:sync,adminLoad:adminLoad,adminHtml:adminHtml};sync();
 
 </script>
 <script>
-/* ===== 課前問卷總表（v2.2）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
+/* ===== 課前問卷總表（v2.3：十題全看得到、這一班想做什麼、一人一張卡、A4 直式報表）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
 (function(){
 'use strict';
 var A=window.APP,C=window.CORE,esc=A.esc;
@@ -4906,33 +4906,58 @@ function M(){var R=(AD.roster||[]).filter(function(x){return x.role==='正取'||
 /* 猜是誰：名字被包在全名裡（冠文→邱冠文），或同樣長度只差一個字（柯明章→柯明璋）；只從還沒填的人裡面猜 */
 function guess(n,X){if(X.self.indexOf(String(n).toLowerCase())>=0||n.length<2)return null;var c=X.todo.filter(function(x){if(x.indexOf(n)>=0&&x!==n)return true;if(x.length===n.length&&x.length>=3){var d=0;for(var i=0;i<x.length;i++)if(x[i]!==n[i])d++;return d===1;}return false;});return c.length===1?c[0]:null;}
 
+/* ---------- v2.3：十題全部看得到、這一班想做什麼、一人一張卡 ---------- */
+/* 選項太長的只在標籤上縮短，卡片裡的完整回答照原文 */
+function skillShort(v){v=String(v||'');if(/有在寫/.test(v))return '有在寫';if(/沒聽過/.test(v))return '還沒聽過';if(/還沒寫/.test(v))return '聽過，還沒寫過';if(/寫過/.test(v))return '寫過一兩個';return v||'沒填';}
+function devShort(v){v=String(v||'');if(/筆電/.test(v))return '筆電';if(/平板/.test(v))return '平板';if(/手機/.test(v))return '只有手機';return v||'沒填';}
+var ORDER={skill:['還沒聽過','聽過，還沒寫過','寫過一兩個','有在寫'],freq:['每天用','每週用','偶爾用','沒用過'],dev:['筆電','平板','只有手機']};
+function dist(rows,key){var m={},f=key==='skill'?skillShort:key==='dev'?devShort:function(x){return String(x||'').trim()||'沒填';};
+ rows.forEach(function(r){var v=r.a[key];(key==='tools'?String(v||'').split(/[、,，\s]+/).filter(Boolean):[f(v)]).forEach(function(x){if(key==='tools'&&/^其他/.test(x))x='其他';m[x]=(m[x]||0)+1;});});
+ var o=ORDER[key],ks=Object.keys(m);ks.sort(function(a,b){if(o){var ia=o.indexOf(a),ib=o.indexOf(b);if(ia>=0||ib>=0)return (ia<0?99:ia)-(ib<0?99:ib);}return m[b]-m[a];});
+ return ks.map(function(k){return {k:k,n:m[k]};});}
+var PANELS=[['work','最想帶走的作品'],['skill','有沒有寫 Skill 的習慣'],['freq','用 AI 的頻率'],['tools','用過的 AI'],['dev','上課帶的設備']];
+function bars(rows,p){var d=dist(rows,p[0]),mx=Math.max.apply(null,d.map(function(x){return x.n;}).concat([1]));
+ return '<section class="pnl"><h5>'+p[1]+'</h5>'+d.map(function(x){return '<div class="br'+(p[0]==='dev'&&x.k!=='筆電'?' warn':'')+'"><span>'+esc(x.k)+'</span><i><u style="width:'+Math.round(x.n/mx*100)+'%"></u></i><b>'+x.n+'</b></div>';}).join('')+'</section>';}
+function card(r){var a=r.a,pc=!noPC(a);
+ return '<article class="cd'+(pc?'':' nopc')+'"><div class="cl"><div class="who"><b>'+esc(r.n)+'</b>'+(r.role?'<span class="rl">'+esc(r.role)+'</span>':'')+'</div>'+
+  (r.ex?'<small class="as">名字還沒對應</small>':r.as!==r.n?'<small class="as">問卷上寫「'+esc(r.as)+'」</small>':'')+
+  '<p class="job">'+esc(a.job||'沒填')+'</p><div class="tags"><span class="t wk">'+esc(a.work||'沒填')+'</span><span class="t sk">Skill：'+esc(skillShort(a.skill))+'</span><span class="t dv'+(pc?'':' no')+'">'+esc(devShort(a.dev))+'</span></div><time>'+when(r.ts)+' 填</time></div>'+
+  '<dl><dt>每週最想交給 AI 的事</dt><dd>'+esc(a.pain||'—')+'</dd><dt>最需要老師協助的地方</dt><dd>'+esc(a.help||'—')+'</dd><dt>作品要用在哪裡</dt><dd>'+esc(a.use||'—')+'</dd><dt>對這堂課的期待</dt><dd>'+esc(a.hope||'—')+'</dd><dt>平常用 AI</dt><dd>'+esc(a.freq||'—')+'・'+esc(a.tools||'—')+'</dd></dl></article>';}
+
 var css=document.createElement('style');css.textContent=
-'.sx{--sr:#ff8fa3;--sg:#6fe3a5}.sx .sxh{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;justify-content:space-between;margin-bottom:.9rem}.sx .sxh h3{margin:0;font-size:1.25rem;letter-spacing:-.01em}.sx .sxh h3 small{display:block;font-size:.78rem;color:var(--mut);font-weight:600;margin-top:.2rem}'+
+'.sx{--sa:#8fa6ff;--sw:#FFD400}.sx .sxh{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;justify-content:space-between;margin-bottom:1rem}.sx .sxh h3{margin:0;font-size:1.3rem;letter-spacing:-.01em}.sx .sxh h3 small{display:block;font-size:.78rem;color:var(--mut);font-weight:600;margin-top:.25rem;letter-spacing:0}'+
 '.sx .sxa{display:flex;flex-wrap:wrap;gap:.45rem}.sx .sxa .chip{min-height:2.4rem;padding:.45rem .95rem;font-size:.84rem}.sx .sxa .chip.pri{background:var(--c2);color:#1a1400;border-color:var(--c2)}.sx .chip:active{transform:scale(.97)}.sx .chip[disabled]{opacity:.55;cursor:progress}'+
-'.sx .sxk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:.6rem}.sx .sxk div{border:1px solid var(--line);border-radius:1rem;padding:.75rem .9rem;background:var(--glass)}.sx .sxk b{display:block;font-size:1.9rem;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}.sx .sxk span{font-size:.76rem;color:var(--mut);font-weight:700}'+
-'.sx .sxk .r b{color:var(--sr)}.sx .sxk .g b{color:var(--sg)}.sx .sxk .y b{color:var(--c2)}'+
-'.sx .sxb{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}.sx .sxb div{border:1px solid var(--line);border-radius:1rem;padding:.65rem .9rem;background:var(--glass);font-weight:800;font-size:.86rem}.sx .sxb em{float:right;font-style:normal;color:var(--mut)}.sx .sxb i{display:block;height:.5rem;border-radius:99px;background:rgba(255,255,255,.08);margin-top:.45rem;overflow:hidden}.sx .sxb u{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3fd68a,var(--sg))}'+
-'.sx h4{font-size:1rem;margin:1.2rem 0 .3rem;display:flex;align-items:center;gap:.5rem}.sx h4 span{font-size:.74rem;font-weight:900;border-radius:99px;padding:.1rem .6rem}.sx h4 .r{background:rgba(255,143,163,.15);color:var(--sr)}.sx h4 .y{background:rgba(255,212,0,.14);color:var(--c2)}.sx h4 .g{background:rgba(111,227,165,.14);color:var(--sg)}'+
-'.sx .sxs{color:var(--mut);font-size:.8rem;margin:0 0 .6rem}.sx .sxg{border:1px solid var(--line);border-radius:1rem;padding:.7rem .9rem;margin-bottom:.6rem;background:var(--glass)}.sx .sxg h5{margin:0 0 .5rem;font-size:.8rem;color:var(--mut)}'+
-'.sx .sxn{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr));gap:.4rem}.sx .sxn span{display:block;padding:.45rem .65rem;border-radius:.7rem;border:1px solid var(--line);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+'.sx .sxk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:.6rem}.sx .sxk div{border:1px solid var(--line);border-radius:1rem;padding:.8rem 1rem;background:var(--glass)}.sx .sxk b{display:block;font-size:2rem;line-height:1;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em}.sx .sxk span{display:block;margin-top:.35rem;font-size:.78rem;color:var(--mut);font-weight:700}.sx .sxk .hl{border-color:rgba(143,166,255,.45);background:rgba(91,123,255,.12)}.sx .sxk .hl b{color:var(--sa)}'+
+'.sx .sxb{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.2rem}.sx .sxb div{border:1px solid var(--line);border-radius:1rem;padding:.7rem 1rem;background:var(--glass);font-weight:800;font-size:.88rem}.sx .sxb em{float:right;font-style:normal;color:var(--mut);font-variant-numeric:tabular-nums}.sx .sxb i{display:block;height:.45rem;border-radius:99px;background:rgba(255,255,255,.08);margin-top:.5rem;overflow:hidden}.sx .sxb u{display:block;height:100%;border-radius:99px;background:var(--sa)}'+
+'.sx h4{font-size:1.05rem;margin:1.6rem 0 .35rem;display:flex;align-items:center;gap:.5rem}.sx h4 span{font-size:.74rem;font-weight:900;border-radius:99px;padding:.12rem .6rem;background:rgba(255,255,255,.08);color:var(--ink)}.sx h4 .y{background:rgba(255,212,0,.14);color:var(--c2)}'+
+'.sx .sxs{color:var(--mut);font-size:.82rem;margin:0 0 .7rem}.sx .sxg{border:1px solid var(--line);border-radius:1rem;padding:.8rem 1rem;margin-bottom:.6rem;background:var(--glass)}.sx .sxg h5{margin:0 0 .55rem;font-size:.8rem;color:var(--mut)}'+
+'.sx .sxn{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.6rem,1fr));gap:.45rem}.sx .sxn span{display:flex;align-items:center;gap:.5rem;padding:.5rem .7rem;border-radius:.75rem;border:1px solid var(--line);font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sx .sxn span:before{content:"";flex:none;width:.85rem;height:.85rem;border:1.5px solid var(--mut);border-radius:50%}'+
 '.sx .sxf{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .6rem;border:1px solid rgba(255,212,0,.35);border-radius:1rem;padding:.65rem .9rem;margin-bottom:.5rem;background:rgba(255,212,0,.04)}.sx .sxf b{font-size:1rem;min-width:4.5em}.sx .sxf .hint{color:var(--mut);font-size:.8rem;flex:1;min-width:10em}.sx .sxf .hint b{font-size:inherit;color:var(--ink)}'+
 '.sx .sxf select{font:inherit;font-size:.86rem;color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:.6rem;padding:.45rem .5rem;min-height:2.4rem}.sx .sxf select option{color:#111}'+
 '.sx .sxm{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 .4rem}.sx .sxm .chip{font-size:.74rem}'+
-'.sx table.grid tr.sxr{cursor:pointer}.sx table.grid tr.sxr:hover td{background:rgba(255,255,255,.03)}.sx td.nm{font-weight:900;white-space:nowrap}.sx td.nm small{display:block;color:var(--mut);font-weight:600;font-size:.72rem}.sx .tg{display:inline-block;font-size:.68rem;font-weight:800;border-radius:.35rem;padding:0 .4rem;background:rgba(91,124,255,.18);color:#b9c7ff;margin-left:.3rem}.sx .tg.w{background:rgba(255,212,0,.16);color:var(--c2);margin:0}'+
-'.sx tr.sxo td{background:rgba(255,255,255,.025);font-size:.8rem}.sx tr.sxo dl{display:grid;grid-template-columns:8.5em 1fr;gap:.25rem .8rem;margin:0}.sx tr.sxo dt{color:var(--mut)}.sx tr.sxo dd{margin:0}'+
+'.sx .pnls{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem}.sx .pnl{border:1px solid var(--line);border-radius:1rem;padding:.85rem 1rem;background:var(--glass)}.sx .pnl h5{margin:0 0 .6rem;font-size:.82rem;color:var(--mut)}'+
+'.sx .br{display:grid;grid-template-columns:7.5em 1fr 2em;align-items:center;gap:.6rem;font-size:.84rem;font-weight:700;margin:.32rem 0}.sx .br span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sx .br i{height:.5rem;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.sx .br u{display:block;height:100%;border-radius:99px;background:var(--sa)}.sx .br b{text-align:right;font-variant-numeric:tabular-nums}.sx .br.warn u{background:var(--sw)}'+
+'.sx .cds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.sx .cd{border:1px solid var(--line);border-radius:1.1rem;padding:1rem 1.1rem;background:var(--glass);display:grid;grid-template-columns:minmax(0,11rem) minmax(0,1fr);gap:.4rem 1.1rem}.sx .cd.nopc{border-color:rgba(255,212,0,.45)}'+
+'.sx .cd .who{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}.sx .cd .who b{font-size:1.08rem}.sx .cd .rl{font-size:.68rem;font-weight:800;border-radius:.35rem;padding:.05rem .4rem;background:rgba(91,124,255,.18);color:#c3cfff}.sx .cd .as{display:block;color:var(--mut);font-size:.72rem;margin-top:.15rem}'+
+'.sx .cd .job{margin:.45rem 0 .5rem;font-size:.86rem;line-height:1.5}.sx .cd .tags{display:flex;flex-wrap:wrap;gap:.3rem}.sx .cd .t{font-size:.72rem;font-weight:800;border-radius:.45rem;padding:.15rem .5rem;background:rgba(255,255,255,.08)}.sx .cd .t.wk{background:rgba(91,124,255,.2);color:#d5ddff}.sx .cd .t.no{background:var(--sw);color:#1a1400}'+
+'.sx .cd time{display:block;margin-top:.55rem;font-size:.72rem;color:var(--mut);font-variant-numeric:tabular-nums}.sx .cd dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:.1rem}.sx .cd dt{font-size:.72rem;color:var(--mut);font-weight:700;margin-top:.35rem}.sx .cd dt:first-child{margin-top:0}.sx .cd dd{margin:0;font-size:.86rem;line-height:1.5;overflow-wrap:anywhere}'+
 '.sxd{margin-top:1.4rem}.sxd>summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--mut);padding:.4rem 0}'+
-'@media (max-width:760px){.sx .sxk{grid-template-columns:1fr 1fr}.sx .sxb{grid-template-columns:1fr}.sx .hide-s{display:none}.sx .sxa .chip,.sx .sxf .chip,.sx .sxf select{min-height:2.75rem}.sx .sxa{width:100%}.sx .sxa .chip{flex:1 1 auto}.sx .sxf select{flex:1 1 100%}}'+
-'#sxprint{display:none}@media print{body.sxp>*:not(#sxprint){display:none!important}body.sxp{background:#fff!important}body.sxp>#sxprint{display:block!important}#sxprint .rep{width:auto!important}@page{size:A4 landscape;margin:10mm}}';
+'@media (max-width:1100px){.sx .cds{grid-template-columns:1fr}}'+
+'@media (max-width:760px){.sx .sxk{grid-template-columns:1fr 1fr}.sx .sxb{grid-template-columns:1fr}.sx .cd{grid-template-columns:1fr}.sx .sxa .chip,.sx .sxf .chip,.sx .sxf select{min-height:2.75rem}.sx .sxa{width:100%}.sx .sxa .chip{flex:1 1 auto}.sx .sxf select{flex:1 1 100%}}'+
+'@media (prefers-reduced-motion:reduce){.sx .chip:active{transform:none}}'+
+'#sxprint{display:none}@media print{body.sxp>*:not(#sxprint){display:none!important}body.sxp{background:#fff!important}body.sxp>#sxprint{display:block!important}@page{size:A4 portrait;margin:0}}';
 document.head.appendChild(css);
 
+function rowsOf(X){var rows=X.done.slice().sort(function(a,b){return X.by[a].ts-X.by[b].ts;}).map(function(n){var r=X.by[n];return {n:n,role:X.role[n],as:r.as,a:r.a,ts:r.ts,ex:false};});
+ if(!X.names.length)rows=rows.concat(X.extra.map(function(s){return {n:s.name,role:'',as:s.name,a:s.answers||{},ts:s.ts,ex:true};}));return rows;}
 function html(ad){AD=ad;var X=M(),h='<div class="sx">';
  h+='<div class="sxh"><h3>課前問卷總表<small>'+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</small></h3><div class="sxa">'+
   '<button class="chip pri" data-sx="copy"'+(X.names.length?'':' disabled')+'>複製還沒填的名單</button><button class="chip" data-sx="xlsx">下載 Excel</button><button class="chip" data-sx="pdf">下載 PDF</button><button class="chip" data-sx="print">列印</button></div></div>';
  if(!X.names.length)h+='<p class="sxs">這一梯還沒有正取或試聽的名單，所以算不出誰還沒填。先到「名單和出席」把名單加好；下面先列出已經填的人。</p>';
  else{
-  h+='<div class="sxk"><div><b>'+X.names.length+'</b><span>名單上的人</span></div><div class="g"><b>'+X.done.length+'</b><span>已經填了</span></div><div class="r"><b>'+X.todo.length+'</b><span>還沒填</span></div><div class="y"><b>'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
+  h+='<div class="sxk"><div><b>'+X.names.length+'</b><span>名單上的人</span></div><div><b>'+X.done.length+'</b><span>已經填了</span></div><div class="hl"><b>'+X.todo.length+'</b><span>還沒填</span></div><div><b>'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
   h+='<div class="sxb">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了<em>'+r.p+'%</em><i><u style="width:'+r.p+'%"></u></i></div>';}).join('')+'</div>';
-  h+='<h4>還沒填 <span class="r">'+X.todo.length+' 人</span></h4><p class="sxs">按「複製還沒填的名單」，貼到 LINE 給業務去提醒。</p>';
+  h+='<h4>還沒填 <span>'+X.todo.length+' 人</span></h4><p class="sxs">按「複製還沒填的名單」，貼到 LINE 給業務去提醒。</p>';
   h+=['正取','試聽'].map(function(r){var l=X.todo.filter(function(n){return X.role[n]===r;});return l.length?'<div class="sxg"><h5>'+r+'（'+l.length+'）</h5><div class="sxn">'+l.map(function(n){return '<span title="'+esc(n)+'">'+esc(n)+'</span>';}).join('')+'</div></div>':'';}).join('')||'<div class="sxg">全部都填了。</div>';
   if(X.extra.length){h+='<h4>名字對不上，要你確認 <span class="y">'+X.extra.length+' 份</span></h4><p class="sxs">有人填問卷時沒打全名，系統對不到名單。選他是誰按確認，之後就算他已填。</p>';
    X.extra.forEach(function(s){var n=s.name,g=guess(n,X),me=X.self.indexOf(String(n).toLowerCase())>=0,a=s.answers||{};
@@ -4940,14 +4965,11 @@ function html(ad){AD=ad;var X=M(),h='<div class="sx">';
      '<select aria-label="'+esc(n)+' 是名單上的誰"><option value="">他是名單上的誰？</option>'+X.todo.map(function(x){return '<option'+(x===g?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select><button class="chip pri" data-sx="ok">確認</button><button class="chip" data-sx="skip">不算</button></div>';});}
   var mp=AD.svmap||{},mk=Object.keys(mp).filter(function(k){return (AD.surveys||[]).some(function(s){return s.name===k;});});
   if(mk.length)h+='<div class="sxm"><span class="sxs" style="margin:0;align-self:center">已經對應過：</span>'+mk.map(function(k){return '<button class="chip" data-sx="undo" data-n="'+esc(k)+'" title="按一下取消">'+esc(k)+' → '+(mp[k]==='-'?'不算':esc(mp[k]))+'　×</button>';}).join('')+'</div>';}
- var rows=X.done.slice().sort(function(a,b){return X.by[a].ts-X.by[b].ts;}).map(function(n){var r=X.by[n];return {n:n,role:X.role[n],as:r.as,a:r.a,ts:r.ts};});
- if(!X.names.length)rows=rows.concat(X.extra.map(function(s){return {n:s.name,role:'',as:s.name,a:s.answers||{},ts:s.ts};}));
- h+='<h4>已經填了 <span class="g">'+rows.length+' 人</span></h4><p class="sxs">點一列看他十題的完整回答，沒帶筆電的標黃色。</p>';
- if(rows.length){h+='<div class="tw"><table class="grid"><tr><th>姓名</th><th>行業和工作</th><th>最想帶走的作品</th><th class="hide-s">最需要協助</th><th class="hide-s">每週最想交給 AI 的事</th><th>設備</th><th class="hide-s">填寫時間</th></tr>';
-  rows.forEach(function(r){var a=r.a;h+='<tr class="sxr" data-n="'+esc(r.n)+'"><td class="nm">'+esc(r.n)+(r.role?'<span class="tg">'+r.role+'</span>':'')+(r.as!==r.n?'<small>問卷上寫「'+esc(r.as)+'」</small>':'')+'</td><td>'+esc(a.job)+'</td><td>'+esc(a.work)+'</td><td class="hide-s">'+esc(a.help)+'</td><td class="hide-s">'+esc(a.pain)+'</td><td>'+(noPC(a)?'<span class="tg w">'+esc(a.dev||'沒填')+'</span>':esc(a.dev))+'</td><td class="hide-s">'+when(r.ts)+'</td></tr>';
-   if(OPEN[r.n])h+=more(a);});h+='</table></div>';}
+ var rows=rowsOf(X);
+ if(rows.length){h+='<h4>這一班想做什麼 <span>'+rows.length+' 份問卷</span></h4><p class="sxs">下午要準備哪幾類範本、Skill 要從哪裡講起，看這裡。</p><div class="pnls">'+PANELS.map(function(p){return bars(rows,p);}).join('')+'</div>';}
+ h+='<h4>已經填了 <span>'+rows.length+' 人</span></h4><p class="sxs">十題全部列出來，沒帶筆電的卡片標黃色。</p>';
+ if(rows.length)h+='<div class="cds">'+rows.map(card).join('')+'</div>';
  return h+'</div>';}
-function more(a){return '<tr class="sxo"><td colspan="7"><dl>'+KEYS.map(function(k){return '<dt>'+QL[k]+'</dt><dd>'+esc(a[k]||'—')+'</dd>';}).join('')+'</dl></td></tr>';}
 
 /* 對應存回雲端；畫面先改，失敗再改回來 */
 function setMap(from,v,msg){var old=JSON.parse(JSON.stringify(AD.svmap||{})),d={from:from};AD.svmap=AD.svmap||{};
@@ -5003,16 +5025,49 @@ function buildXlsx(){var X=M(),wb=new window.ExcelJS.Workbook();wb.creator='AI �
  f.autoFilter={from:{row:1,column:1},to:{row:1,column:4+KEYS.length}};
  return wb.xlsx.writeBuffer().then(function(buf){return new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});});}
 
-/* 白底報表：PDF 和列印共用同一份 */
-function report(){var X=M(),h='<div class="rep"><style>.rep{width:1000px;box-sizing:border-box;background:#fff;color:#16213a;font:13px/1.55 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:6px;text-align:left}.rep h1{margin:0;font-size:28px;color:#0B1F3A}.rep .s{color:#55627A;font-size:13px;margin:4px 0 14px}.rep .k{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}.rep .k div{background:#FFF5E1;border-left:4px solid;border-radius:8px;padding:10px 14px}.rep .k b{display:block;font-size:30px;line-height:1.1}.rep .k span{color:#55627A;font-size:12px}.rep .bs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}.rep .bs div{border:1px solid #D9DEE8;border-radius:8px;padding:8px 12px;font-weight:700}.rep .tr{height:8px;border-radius:9px;background:#EEF1F6;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep .tr i{display:block;height:8px;border-radius:9px;background:#1E7A4F}.rep h2{font-size:17px;margin:14px 0 8px;color:#0B1F3A}.rep h2 em{font-style:normal;font-size:12px;font-weight:800;border-radius:9px;padding:1px 8px;margin-left:6px}.rep .rg{border:1px solid #D9DEE8;border-radius:8px;padding:8px 12px;margin-bottom:8px;break-inside:avoid}.rep .rg h3{margin:0 0 6px;font-size:13px;color:#55627A}.rep .rk{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}.rep .rk span{border:1px solid #C9CFDB;border-radius:6px;padding:5px 7px;font-weight:700}.rep .rk span:before{content:"";display:inline-block;width:11px;height:11px;border:1.4px solid #55627A;border-radius:3px;margin-right:6px;vertical-align:-1px}.rep table{width:100%;border-collapse:collapse}.rep th{background:#0B1F3A;color:#fff;text-align:left;font-size:12px;padding:6px 8px}.rep td{border-bottom:1px solid #E3E7EE;padding:6px 8px;vertical-align:top;font-size:12px}.rep tr{break-inside:avoid}.rep tr:nth-child(even) td{background:#F7F8FB}.rep .y{background:#FFE58A!important;font-weight:800}.rep .t{font-size:11px;color:#55627A}.rep .pb{page-break-before:always;break-before:page}.rep th:nth-child(2),.rep td:nth-child(2),.rep th:nth-child(7),.rep td:nth-child(7),.rep th:nth-child(8),.rep td:nth-child(8){white-space:nowrap}.rep *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
- h+='<h1>課前問卷總表</h1><div class="s">AI 實戰課 '+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</div>';
- if(X.names.length){h+='<div class="k"><div style="border-color:#0B1F3A"><b style="color:#0B1F3A">'+X.names.length+'</b><span>名單上的人</span></div><div style="border-color:#1E7A4F"><b style="color:#1E7A4F">'+X.done.length+'</b><span>已經填了</span></div><div style="border-color:#C0392B"><b style="color:#C0392B">'+X.todo.length+'</b><span>還沒填</span></div><div style="border-color:#9A6B00"><b style="color:#9A6B00">'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
-  h+='<div class="bs">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了（'+r.p+'%）<div class="tr"><i style="width:'+r.p+'%"></i></div></div>';}).join('')+'</div>';
-  h+='<h2>還沒填<em style="background:#FDECEA;color:#C0392B">'+X.todo.length+' 人</em></h2>'+['正取','試聽'].map(function(r){var l=X.todo.filter(function(x){return X.role[x]===r;});return l.length?'<div class="rg"><h3>'+r+' '+l.length+' 位</h3><div class="rk">'+l.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div></div>':'';}).join('');}
- var rows=doneRows(X);
- h+='<h2'+(X.names.length?' class="pb"':'')+'>已經填了<em style="background:#E6F4EC;color:#1E7A4F">'+rows.length+' 份</em></h2><table><thead><tr><th>姓名</th><th>身分</th><th>行業和工作</th><th>最想帶走的作品</th><th>最需要協助</th><th>每週最想交給 AI 的事</th><th>設備</th><th>填寫時間</th></tr></thead><tbody>'+
-  rows.map(function(r){var a=r.a;return '<tr><td><b>'+esc(r.n)+'</b>'+(r.ex?'<div class="t">名字還沒對應</div>':r.as!==r.n?'<div class="t">問卷上寫「'+esc(r.as)+'」</div>':'')+'</td><td>'+esc(r.role)+'</td><td>'+esc(a.job)+'</td><td>'+esc(a.work)+'</td><td>'+esc(a.help)+'</td><td>'+esc(a.pain)+'</td><td'+(noPC(a)?' class="y"':'')+'>'+esc(a.dev)+'</td><td>'+when(r.ts)+'</td></tr>';}).join('')+'</tbody></table></div>';
- return h;}
+/* 白底報表（v2.3）：A4 直式，一頁一頁先排好再輸出，卡片不會被切開；PDF 和列印共用 */
+var REPCSS='<style>.rp{font:12px/1.55 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;color:#1C2433;text-align:left}.rp *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+'.rp .pg{width:794px;height:1120px;padding:44px 48px 40px;background:#fff;position:relative;overflow:hidden}.rp .pg+.pg{break-before:page;page-break-before:always}'+
+'.rp .ph{display:flex;justify-content:space-between;font-size:10.5px;color:#7A8395;letter-spacing:.04em;border-bottom:1px solid #E6E9EF;padding-bottom:8px;margin-bottom:18px}.rp .pf{position:absolute;left:48px;right:48px;bottom:22px;font-size:10.5px;color:#9AA1AE;text-align:right;font-variant-numeric:tabular-nums}'+
+'.rp h1{margin:0;font-size:30px;letter-spacing:-.02em;color:#0F1729}.rp .sb{color:#5E6778;font-size:12.5px;margin:6px 0 20px}'+
+'.rp .k{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}.rp .k div{border:1px solid #E3E6EC;border-radius:12px;padding:12px 14px}.rp .k b{display:block;font-size:28px;line-height:1;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.rp .k span{display:block;margin-top:6px;font-size:11px;color:#5E6778;font-weight:600}.rp .k .hl{background:#EEF2FF;border-color:#C9D3FF}.rp .k .hl b{color:#2546F0}'+
+'.rp .ps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}.rp .ps div{border:1px solid #E3E6EC;border-radius:12px;padding:10px 14px;font-weight:700}.rp .ps em{float:right;font-style:normal;color:#5E6778;font-variant-numeric:tabular-nums}.rp .ps i{display:block;height:6px;border-radius:9px;background:#EEF0F4;margin-top:8px;overflow:hidden}.rp .ps u{display:block;height:6px;border-radius:9px;background:#2546F0}'+
+'.rp h2{font-size:16px;margin:22px 0 10px;color:#0F1729;display:flex;align-items:center;gap:8px}.rp h2 em{font-style:normal;font-size:11px;font-weight:700;color:#5E6778;background:#F1F3F6;border-radius:99px;padding:1px 9px}'+
+'.rp .g{border:1px solid #E3E6EC;border-radius:12px;padding:10px 14px;margin-bottom:8px}.rp .g h3{margin:0 0 8px;font-size:11.5px;color:#5E6778}.rp .nm{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.rp .nm span{display:flex;align-items:center;gap:6px;border:1px solid #DDE1E8;border-radius:8px;padding:5px 8px;font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden}.rp .nm span:before{content:"";flex:none;width:10px;height:10px;border:1.4px solid #7A8395;border-radius:50%}'+
+'.rp .pn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.rp .pnl{border:1px solid #E3E6EC;border-radius:12px;padding:10px 14px}.rp .pnl h5{margin:0 0 6px;font-size:11.5px;color:#5E6778}.rp .br{display:grid;grid-template-columns:86px 1fr 20px;align-items:center;gap:8px;font-size:11.5px;font-weight:600;margin:4px 0}.rp .br span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rp .br i{height:6px;border-radius:9px;background:#EEF0F4;overflow:hidden}.rp .br u{display:block;height:6px;border-radius:9px;background:#2546F0}.rp .br b{text-align:right;font-variant-numeric:tabular-nums}.rp .br.warn u{background:#E8B400}'+
+'.rp .cd{border:1px solid #E3E6EC;border-radius:12px;padding:12px 14px;margin-bottom:9px;display:grid;grid-template-columns:200px 1fr;gap:4px 16px}.rp .cd.nopc{border-color:#F2D46B;background:#FFFBEA}'+
+'.rp .who{display:flex;align-items:center;gap:6px}.rp .who b{font-size:14.5px;color:#0F1729}.rp .rl{font-size:10px;font-weight:700;border-radius:5px;padding:0 6px;background:#EEF2FF;color:#2546F0}.rp .as{display:block;color:#7A8395;font-size:10.5px;margin-top:2px}'+
+'.rp .job{margin:6px 0 7px;font-size:12px}.rp .tags{display:flex;flex-wrap:wrap;gap:4px}.rp .t{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;background:#F1F3F6;color:#3A4354}.rp .t.wk{background:#EEF2FF;color:#2546F0}.rp .t.no{background:#FFE27A;color:#4A3800}.rp time{display:block;margin-top:7px;font-size:10.5px;color:#7A8395;font-variant-numeric:tabular-nums}'+
+'.rp dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.rp dt{font-size:10.5px;color:#7A8395;font-weight:600}.rp dd{margin:1px 0 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.rp dl>div:last-child{grid-column:1/-1}</style>';
+function rcard(r){var a=r.a,pc=!noPC(a);function q(t,v){return '<div><dt>'+t+'</dt><dd>'+esc(v||'—')+'</dd></div>';}
+ return '<div class="cd'+(pc?'':' nopc')+'"><div><div class="who"><b>'+esc(r.n)+'</b>'+(r.role?'<span class="rl">'+esc(r.role)+'</span>':'')+'</div>'+
+  (r.ex?'<small class="as">名字還沒對應</small>':r.as!==r.n?'<small class="as">問卷上寫「'+esc(r.as)+'」</small>':'')+
+  '<p class="job">'+esc(a.job||'沒填')+'</p><div class="tags"><span class="t wk">'+esc(a.work||'沒填')+'</span><span class="t">Skill：'+esc(skillShort(a.skill))+'</span><span class="t'+(pc?'':' no')+'">'+esc(devShort(a.dev))+'</span></div><time>'+when(r.ts)+' 填</time></div>'+
+  '<dl>'+q('每週最想交給 AI 的事',a.pain)+q('最需要老師協助的地方',a.help)+q('作品要用在哪裡',a.use)+q('對這堂課的期待',a.hope)+q('平常用 AI',(a.freq||'—')+'・'+(a.tools||'—'))+'</dl></div>';}
+/* 把一塊一塊的內容依序塞進 A4 頁面，塞不下就換頁 */
+function reportPages(){var X=M(),rows=doneRows(X),B=[];
+ B.push('<h1>課前問卷總表</h1><div class="sb">AI 實戰課 '+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</div>');
+ if(X.names.length){
+  B.push('<div class="k"><div><b>'+X.names.length+'</b><span>名單上的人</span></div><div><b>'+X.done.length+'</b><span>已經填了</span></div><div class="hl"><b>'+X.todo.length+'</b><span>還沒填</span></div><div><b>'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>'+
+   '<div class="ps">'+X.roles.map(function(r){return '<div>'+r.r+'　'+r.d+' / '+r.all+' 填了<em>'+r.p+'%</em><i><u style="width:'+r.p+'%"></u></i></div>';}).join('')+'</div>');
+  var tg=['正取','試聽'].map(function(r){var l=X.todo.filter(function(x){return X.role[x]===r;});return l.length?'<div class="g"><h3>'+r+' '+l.length+' 位</h3><div class="nm">'+l.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div></div>':'';}).filter(Boolean);
+  B.push('<h2>還沒填<em>'+X.todo.length+' 人</em></h2>'+(tg[0]||'<div class="g">全部都填了。</div>'));if(tg[1])B.push(tg[1]);}
+ if(rows.length){B.push('<h2>這一班想做什麼<em>'+rows.length+' 份問卷</em></h2><div class="pn">'+[0,1,4,2,3].map(function(i){return bars(rows,PANELS[i]);}).join('')+'</div>');}
+ B.push('<h2>已經填了<em>'+rows.length+' 份</em></h2>');
+ rows.forEach(function(r){B.push(rcard(r));});
+ var host=document.createElement('div');host.className='rp';host.style.cssText='position:fixed;left:-10000px;top:0;width:794px';host.innerHTML=REPCSS;document.body.appendChild(host);
+ var pages=[],pg,body,LIM=1120-44-40-40;
+ function np(){pg=document.createElement('div');pg.className='pg';pg.innerHTML='<div class="ph"><span>課前問卷總表・AI 實戰課 '+esc(coShort())+'</span><span>'+when(Date.now())+'</span></div><div class="bd"></div><div class="pf"></div>';host.appendChild(pg);body=pg.querySelector('.bd');pages.push(pg);}
+ np();
+ B.forEach(function(b,i){var w=document.createElement('div');w.innerHTML=b;body.appendChild(w);
+  var orphan=/^<h2/.test(b)&&i<B.length-1;/* 標題不要孤單留在頁底：連下一塊一起量 */
+  var nx=null;if(orphan){nx=document.createElement('div');nx.innerHTML=B[i+1];body.appendChild(nx);}
+  var over=body.scrollHeight>LIM&&body.children.length>(orphan?2:1);if(nx)nx.remove();
+  if(over){w.remove();np();body.appendChild(w);}});
+ pages.forEach(function(p,i){p.querySelector('.pf').textContent='第 '+(i+1)+' / '+pages.length+' 頁';});
+ var out=REPCSS+pages.map(function(p){return p.outerHTML;}).join('');host.remove();
+ return '<div class="rp">'+out.replace(REPCSS,'')+'</div>'+REPCSS;}
+function report(){return reportPages();}
 
 function doPrint(){var old=document.getElementById('sxprint');if(old)old.remove();var d=document.createElement('div');d.id='sxprint';d.innerHTML=report();document.body.appendChild(d);document.body.classList.add('sxp');
  var done=function(){document.body.classList.remove('sxp');d.remove();window.removeEventListener('afterprint',done);};window.addEventListener('afterprint',done);
@@ -5022,12 +5077,9 @@ document.addEventListener('click',function(e){var b=e.target.closest&&e.target.c
  if(k==='copy')copyText(lineText(),'已複製，可以貼到 LINE 了');
  else if(k==='print')doPrint();
  else if(k==='xlsx'){busy(b,true);(window.ExcelJS?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')).then(buildXlsx).then(function(blob){save(blob,fname('xlsx'));toast('Excel 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
- else if(k==='pdf'){busy(b,true);(window.html2pdf?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).then(function(){return window.html2pdf().set({margin:[8,8,10,8],filename:fname('pdf'),image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['tr','.rg','.rk']}}).from(report(),'string').save();}).then(function(){toast('PDF 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
+ else if(k==='pdf'){busy(b,true);(window.html2pdf?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).then(function(){return window.html2pdf().set({margin:0,filename:fname('pdf'),image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollX:0,scrollY:0,x:0,y:0,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css']}}).from(report(),'string').save();}).then(function(){toast('PDF 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
  else if(k==='ok'||k==='skip'){var box=b.closest('.sxf'),n=box.dataset.n;if(k==='skip'){setMap(n,'-',n+' 不列入這一梯');return;}var v=box.querySelector('select').value;if(!v){toast('先選他是誰');return;}setMap(n,v,'好，'+n+' 就是 '+v);}
  else if(k==='undo'){var u=b.dataset.n;setMap(u,null,'已取消 '+u+' 的對應');}});
-document.addEventListener('click',function(e){var tr=e.target.closest&&e.target.closest('.sx tr.sxr');if(!tr)return;var n=tr.dataset.n,nx=tr.nextElementSibling;if(nx&&nx.classList.contains('sxo')){nx.remove();delete OPEN[n];return;}
- var X=M(),r=X.by[n]||(X.extra.filter(function(s){return s.name===n;})[0]||{}),a=r.a||r.answers||{};OPEN[n]=1;tr.insertAdjacentHTML('afterend',more(a));});
-
 window.SVX={html:html,_lineText:lineText,_model:function(){return M();}};
 })();
 
@@ -5713,7 +5765,7 @@ var hud=el('div','islkeep','<div class="kick">AI 實戰課 ・ MISSION CONTROL</
  '<div class="islbar"><button class="ibtn pri" id="ibGo">從第一站出發</button><button class="ibtn" id="ibWard">'+ICON.shirt+'換造型</button><button class="ibtn" id="ibMega">'+ICON.mega+'大聲公</button><button class="ibtn" id="ibPlay">'+ICON.play+'重播降落</button><button class="ibtn" id="ibName" aria-pressed="'+(small||W<760?'false':'true')+'">'+ICON.tag+'名牌</button><button class="ibtn" id="ibLive" aria-pressed="true">'+ICON.live+'熱鬧</button></div>'+
  '<p class="hint" id="islhint"></p>');hud.id='islhud';hero.appendChild(hud);
 var fly=el('section',null,'<div class="flycap"><div class="kick">LIFT OFF ・ 升空</div><h2>旗艦離開母港，<br>帶你看它裡面<em>裝了什麼</em></h2></div>');fly.id='islfly';hero.parentNode.insertBefore(fly,hero.nextSibling);
-var down=el('button','islkeep','<span>往下 ・ 旗艦升空</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');down.id='isldown';down.type='button';document.body.appendChild(down);down.onclick=function(){window.scrollTo({top:H*1.3,left:0,behavior:RM?'auto':'smooth'});};
+var down=el('button','islkeep','<span>旗艦升空</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');down.id='isldown';down.type='button';document.body.appendChild(down);down.onclick=function(){window.scrollTo({top:H*1.3,left:0,behavior:RM?'auto':'smooth'});};
 var fpsEl=null;if(/[?&]fps\b/.test(location.search)){fpsEl=el('div');fpsEl.id='islfps';document.body.appendChild(fpsEl);}
 var demo=el('div',null,'展示版');demo.id='isldemo';if(!window.ISL_PROD)document.body.appendChild(demo);
 var megaBox=el('div');megaBox.id='islmega';document.body.appendChild(megaBox);
