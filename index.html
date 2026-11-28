@@ -4883,7 +4883,7 @@ window.CLASSX={sync:sync,adminLoad:adminLoad,adminHtml:adminHtml};sync();
 
 </script>
 <script>
-/* ===== 課前問卷總表（v2.4：名單外的人可以直接加進名單；v2.3：十題全看得到、這一班想做什麼、一人一張卡、A4 直式報表）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
+/* ===== 課前問卷總表（v2.4：名單外的人可以直接加進名單、下載給產生器；v2.3：十題全看得到、這一班想做什麼、一人一張卡、A4 直式報表）：誰還沒填、名字對應、複製給業務、下載 Excel／PDF、列印 ===== */
 (function(){
 'use strict';
 var A=window.APP,C=window.CORE,esc=A.esc;
@@ -4952,7 +4952,7 @@ function rowsOf(X){var rows=X.done.slice().sort(function(a,b){return X.by[a].ts-
  if(!X.names.length)rows=rows.concat(X.extra.map(function(s){return {n:s.name,role:'',as:s.name,a:s.answers||{},ts:s.ts,ex:true};}));return rows;}
 function html(ad){AD=ad;var X=M(),h='<div class="sx">';
  h+='<div class="sxh"><h3>課前問卷總表<small>'+esc(coName())+'・名單 '+X.names.length+' 人・更新到 '+when(Date.now())+'</small></h3><div class="sxa">'+
-  '<button class="chip pri" data-sx="copy"'+(X.names.length?'':' disabled')+'>複製還沒填的名單</button><button class="chip" data-sx="xlsx">下載 Excel</button><button class="chip" data-sx="pdf">下載 PDF</button><button class="chip" data-sx="print">列印</button></div></div>';
+  '<button class="chip pri" data-sx="copy"'+(X.names.length?'':' disabled')+'>複製還沒填的名單</button><button class="chip" data-sx="gen"'+(X.names.length||X.extra.length?'':' disabled')+' title="給專屬講義產生器用：名單上每一位＋他的問卷">下載給產生器</button><button class="chip" data-sx="xlsx">下載 Excel</button><button class="chip" data-sx="pdf">下載 PDF</button><button class="chip" data-sx="print">列印</button></div></div>';
  if(!X.names.length)h+='<p class="sxs">這一梯還沒有正取或試聽的名單，所以算不出誰還沒填。先到「名單和出席」把名單加好；下面先列出已經填的人。</p>';
  else{
   h+='<div class="sxk"><div><b>'+X.names.length+'</b><span>名單上的人</span></div><div><b>'+X.done.length+'</b><span>已經填了</span></div><div class="hl"><b>'+X.todo.length+'</b><span>還沒填</span></div><div><b>'+X.dev+'</b><span>沒帶筆電（上課多照顧）</span></div></div>';
@@ -5084,6 +5084,9 @@ function doPrint(){var old=document.getElementById('sxprint');if(old)old.remove(
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-sx]');if(!b||!AD)return;var k=b.dataset.sx;
  if(k==='copy')copyText(lineText(),'已複製，可以貼到 LINE 了');
  else if(k==='print')doPrint();
+ else if(k==='gen'){var X=M(),out=X.names.map(function(n){var o={name:n,role:X.role[n]};if(X.by[n])o.survey=X.by[n].a;return o;});
+  X.extra.forEach(function(s){if(!out.some(function(o){return o.name===s.name;}))out.push({name:s.name,role:'名單外',survey:s.answers||{}});});
+  save(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}),'學生資料包_'+coShort()+'_'+stamp()+'.json');toast('學生資料包下載好了：'+out.length+' 位，'+out.filter(function(o){return o.survey;}).length+' 位有問卷');}
  else if(k==='xlsx'){busy(b,true);(window.ExcelJS?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')).then(buildXlsx).then(function(blob){save(blob,fname('xlsx'));toast('Excel 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
  else if(k==='pdf'){busy(b,true);(window.html2pdf?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')).then(function(){return window.html2pdf().set({margin:0,filename:fname('pdf'),image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff',useCORS:true,scrollX:0,scrollY:0,x:0,y:0,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css']}}).from(report(),'string').save();}).then(function(){toast('PDF 下載好了');busy(b,false);}).catch(function(){busy(b,false);toast('下載不了，網路不通時先用「列印」');});}
  else if(k==='ok'||k==='skip'){var box=b.closest('.sxf'),n=box.dataset.n;if(k==='skip'){setMap(n,'-',n+' 不列入這一梯');return;}var v=box.querySelector('select').value;if(!v){toast('先選他是誰');return;}if(v.charAt(0)==='+'){addStu(n,v.slice(1),b);return;}setMap(n,v,'好，'+n+' 就是 '+v);}
